@@ -17,3 +17,15 @@ class ExampleTest extends TestCase
         $response->assertStatus(200);
     }
 }
+
+uses(TestCase::class);
+
+test('the application returns a successful response', function () {
+    $response = $this->get('/');
+
+    $response->assertStatus(200);
+});
+
+test('true is true', function () {
+    expect(true)->toBeTrue();
+});
