@@ -3,10 +3,13 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use App\Traits\ApiResponse;
 use Throwable;
 
 class Handler extends ExceptionHandler
 {
+    use ApiResponse;
+
     /**
      * The list of the inputs that are never flashed to the session on validation exceptions.
      *
@@ -25,6 +28,10 @@ class Handler extends ExceptionHandler
     {
         $this->reportable(function (Throwable $e) {
             //
+        });
+
+        $this->renderable(function (\Illuminate\Auth\AuthenticationException $e, $request) {
+            return $this->error('未经授权', 401);
         });
     }
 }

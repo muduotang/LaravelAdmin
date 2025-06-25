@@ -6,7 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(TestCase::class);
 
 test('success response has correct structure', function () {
-    $response = $this->get('/api/example/success');
+    $response = $this->get('/api/v1/example/success');
 
     $response->assertStatus(200)
         ->assertJson([
@@ -21,7 +21,7 @@ test('success response has correct structure', function () {
 });
 
 test('error response has correct structure', function () {
-    $response = $this->get('/api/example/error');
+    $response = $this->get('/api/v1/example/error');
 
     $response->assertStatus(400)
         ->assertJson([
@@ -33,7 +33,7 @@ test('error response has correct structure', function () {
 });
 
 test('paginate response has correct structure', function () {
-    $response = $this->get('/api/example/paginate?page=1&per_page=5');
+    $response = $this->get('/api/v1/example/paginate?page=1&per_page=5');
 
     $response->assertStatus(200)
         ->assertJsonStructure([
@@ -56,7 +56,7 @@ test('paginate response has correct structure', function () {
 });
 
 test('collection response has correct structure', function () {
-    $response = $this->get('/api/example/collection');
+    $response = $this->get('/api/v1/example/collection');
 
     $response->assertStatus(200)
         ->assertJson([
@@ -69,4 +69,4 @@ test('collection response has correct structure', function () {
                 ['id' => 3, 'name' => 'Item 3'],
             ]
         ]);
-}); 
+});
