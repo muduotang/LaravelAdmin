@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ExampleController;
+use App\Http\Controllers\Api\V2\ExampleController as ExampleV2Controller;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,6 +29,11 @@ Route::prefix('v1')->group(function () {
         Route::get('paginate', [ExampleController::class, 'paginateExample']);
         Route::get('collection', [ExampleController::class, 'collectionExample']);
     });
+});
+
+// V2 API Routes
+Route::prefix('v2')->middleware('api.version:2')->group(function () {
+    Route::get('/example/success', [ExampleV2Controller::class, 'successExample']);
 });
 
 // 默认重定向到最新版本
