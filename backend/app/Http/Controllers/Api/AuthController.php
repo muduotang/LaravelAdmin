@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Api\BaseController;
+use App\Models\AdminOperationLog;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\AdminOperationLog;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\JsonResponse;
 
 class AuthController extends BaseController
 {
     /**
      * 管理员登录
-     * 
+     *
      * @param Request $request
      * @return JsonResponse
      */
@@ -25,14 +24,14 @@ class AuthController extends BaseController
             
             if ($validator->fails()) {
                 return $this->error($validator->errors()->first(), 422, [
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ]);
             }
 
             $credentials = $validator->validated();
             
             // 尝试登录
-            if (!$token = $this->attemptLogin($credentials)) {
+            if (! $token = $this->attemptLogin($credentials)) {
                 return $this->error('用户名或密码错误', 401);
             }
 
@@ -44,41 +43,44 @@ class AuthController extends BaseController
         } catch (\Exception $e) {
             Log::error('Login error', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return $this->error('登录失败：' . $e->getMessage(), 500);
         }
     }
 
     /**
      * 获取当前登录用户信息
-     * 
+     *
      * @return JsonResponse
      */
     public function me(): JsonResponse
     {
         try {
             $user = Auth::guard('admin')->user();
+
             return $this->success([
                 'id' => $user->id,
                 'username' => $user->username,
                 'email' => $user->email,
                 'nick_name' => $user->nick_name,
                 'icon' => $user->icon,
-                'roles' => $user->roles()->get(['roles.id', 'roles.name', 'roles.description'])
+                'roles' => $user->roles()->get(['roles.id', 'roles.name', 'roles.description']),
             ], '获取个人信息成功');
         } catch (\Exception $e) {
             Log::error('Failed to get user info', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return $this->error('获取用户信息失败：' . $e->getMessage());
         }
     }
 
     /**
      * 刷新令牌
-     * 
+     *
      * @return JsonResponse
      */
     public function refresh(): JsonResponse
@@ -91,15 +93,16 @@ class AuthController extends BaseController
         } catch (\Exception $e) {
             Log::error('Token refresh failed', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return $this->error('刷新令牌失败：' . $e->getMessage());
         }
     }
 
     /**
      * 退出登录
-     * 
+     *
      * @param Request $request
      * @return JsonResponse
      */
@@ -116,15 +119,16 @@ class AuthController extends BaseController
         } catch (\Exception $e) {
             Log::error('Logout failed', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return $this->error('退出登录失败：' . $e->getMessage());
         }
     }
 
     /**
      * 验证登录请求
-     * 
+     *
      * @param Request $request
      * @return \Illuminate\Contracts\Validation\Validator
      */
@@ -138,7 +142,7 @@ class AuthController extends BaseController
 
     /**
      * 尝试登录
-     * 
+     *
      * @param array $credentials
      * @return string|null
      */
@@ -159,7 +163,7 @@ class AuthController extends BaseController
 
     /**
      * 返回令牌响应
-     * 
+     *
      * @param string $token
      * @param string|null $message
      * @return JsonResponse
@@ -169,7 +173,7 @@ class AuthController extends BaseController
         $data = [
             'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => Auth::guard('admin')->factory()->getTTL() * 60
+            'expires_in' => Auth::guard('admin')->factory()->getTTL() * 60,
         ];
 
         return $this->success($data, $message);
@@ -177,7 +181,7 @@ class AuthController extends BaseController
 
     /**
      * 记录登录日志
-     * 
+     *
      * @param Request $request
      * @return void
      */
@@ -199,7 +203,7 @@ class AuthController extends BaseController
 
     /**
      * 记录退出日志
-     * 
+     *
      * @param Request $request
      * @return void
      */
@@ -220,4 +224,4 @@ class AuthController extends BaseController
             ]);
         }
     }
-} 
+}

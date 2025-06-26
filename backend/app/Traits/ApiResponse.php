@@ -23,7 +23,7 @@ trait ApiResponse
             'status' => 'success',
             'code' => $code,
             'message' => $message,
-            'data' => $data
+            'data' => $data,
         ], $code);
     }
 
@@ -41,7 +41,7 @@ trait ApiResponse
             'status' => 'error',
             'code' => $code,
             'message' => $message,
-            'data' => $data
+            'data' => $data,
         ], $code);
     }
 
@@ -64,8 +64,8 @@ trait ApiResponse
                 'total' => $paginator->total(),
                 'per_page' => $paginator->perPage(),
                 'current_page' => $paginator->currentPage(),
-                'last_page' => $paginator->lastPage()
-            ]
+                'last_page' => $paginator->lastPage(),
+            ],
         ], $code);
     }
 
@@ -83,7 +83,7 @@ trait ApiResponse
             'status' => 'success',
             'code' => $code,
             'message' => $message,
-            'data' => $collection
+            'data' => $collection,
         ], $code);
     }
 
@@ -122,4 +122,4 @@ trait ApiResponse
     {
         return $this->success($data, $message, BaseResource::HTTP_OK);
     }
-} 
+}
