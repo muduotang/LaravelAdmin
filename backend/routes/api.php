@@ -44,6 +44,8 @@ Route::middleware('auth:admin')->group(function () {
     Route::apiResource('roles', RoleController::class);
     Route::post('roles/{role}/resources', [RoleController::class, 'assignResources'])->name('roles.assignResources');
     Route::post('roles/{role}/menus', [RoleController::class, 'assignMenus'])->name('roles.assignMenus');
+    Route::get('roles/{role}/menus', [RoleController::class, 'getMenus'])->name('roles.getMenus');
+    Route::get('roles/{role}/resources', [RoleController::class, 'getResources'])->name('roles.getResources');
     
     // 菜单管理
     Route::get('menus/tree', [MenuController::class, 'tree'])->name('menus.tree');

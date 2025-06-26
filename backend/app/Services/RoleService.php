@@ -174,4 +174,108 @@ class RoleService
     {
         return $role->permissions()->pluck('id');
     }
-} 
+
+    /**
+     * 为角色分配菜单
+     *
+     * @param Role $role
+     * @param array $menuIds
+     * @param int $adminId
+     * @param string $ip
+     * @param string $userAgent
+     * @return void
+     */
+    public function assignMenus(Role $role, array $menuIds, int $adminId, string $ip, string $userAgent): void
+    {
+        // 验证菜单ID是否存在
+        if (!empty($menuIds)) {
+            $existingMenuIds = \App\Models\Menu::whereIn('id', $menuIds)->pluck('id')->toArray();
+            $invalidMenuIds = array_diff($menuIds, $existingMenuIds);
+            
+            if (!empty($invalidMenuIds)) {
+                throw new \InvalidArgumentException('The selected menu ids is invalid.');
+            }
+        }
+        
+        DB::transaction(function () use ($role, $menuIds, $adminId, $ip, $userAgent) {
+            // 同步菜单关联
+            $role->menus()->sync($menuIds);
+
+            // 记录操作日志
+            $this->recordAdminOperation(
+                '分配角色菜单',
+                [
+                    'role_id' => $role->id,
+                    'menu_ids' => $menuIds
+                ],
+                'POST',
+                'api/roles/' . $role->id . '/menus',
+                $ip,
+                $userAgent
+            );
+        });
+    }
+
+    /**
+     * 为角色分配资源
+     *
+     * @param Role $role
+     * @param array $resourceIds
+     * @param int $adminId
+     * @param string $ip
+     * @param string $userAgent
+     * @return void
+     */
+    public function assignResources(Role $role, array $resourceIds, int $adminId, string $ip, string $userAgent): void
+    {
+        // 验证资源ID是否存在
+        if (!empty($resourceIds)) {
+            $existingResourceIds = \App\Models\Resource::whereIn('id', $resourceIds)->pluck('id')->toArray();
+            $invalidResourceIds = array_diff($resourceIds, $existingResourceIds);
+            
+            if (!empty($invalidResourceIds)) {
+                throw new \InvalidArgumentException('The selected resource ids is invalid.');
+            }
+        }
+        
+        DB::transaction(function () use ($role, $resourceIds, $adminId, $ip, $userAgent) {
+            // 同步资源关联
+            $role->resources()->sync($resourceIds);
+
+            // 记录操作日志
+            $this->recordAdminOperation(
+                '分配角色资源',
+                [
+                    'role_id' => $role->id,
+                    'resource_ids' => $resourceIds
+                ],
+                'POST',
+                'api/roles/' . $role->id . '/resources',
+                $ip,
+                $userAgent
+            );
+        });
+    }
+
+    /**
+     * 获取角色的所有菜单ID
+     *
+     * @param Role $role
+     * @return Collection
+     */
+    public function getMenus(Role $role): Collection
+    {
+        return $role->menus()->pluck('id');
+    }
+
+    /**
+     * 获取角色的所有资源ID
+     *
+     * @param Role $role
+     * @return Collection
+     */
+    public function getResources(Role $role): Collection
+    {
+        return $role->resources()->pluck('id');
+    }
+}

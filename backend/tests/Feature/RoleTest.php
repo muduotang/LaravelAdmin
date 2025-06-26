@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Admin;
+use App\Models\Menu;
+use App\Models\Resource;
+use App\Models\ResourceCategory;
 use App\Models\Role;
 use Tests\TestCase;
 
@@ -194,7 +197,7 @@ class RoleTest extends TestCase
 
         // 验证数据库中的关联关系
         foreach ($menus as $menu) {
-            $this->assertDatabaseHas('role_menus', [
+            $this->assertDatabaseHas('role_menu', [
                 'role_id' => $role->id,
                 'menu_id' => $menu->id,
             ]);
@@ -227,7 +230,7 @@ class RoleTest extends TestCase
 
         // 验证数据库中的关联关系
         foreach ($resources as $resource) {
-            $this->assertDatabaseHas('role_resources', [
+            $this->assertDatabaseHas('role_resource', [
                 'role_id' => $role->id,
                 'resource_id' => $resource->id,
             ]);

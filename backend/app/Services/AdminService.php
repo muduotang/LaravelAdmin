@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Admin;
 use App\Exceptions\AdminException;
+use App\Traits\AdminOperationLoggable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class AdminService
 {
+    use AdminOperationLoggable;
     /**
      * 获取管理员列表
      *
@@ -140,11 +142,41 @@ class AdminService
      *
      * @param Admin $admin
      * @param array $roleIds
+     * @param int $operatorId
+     * @param string $ip
+     * @param string $userAgent
      * @return void
      */
-    public function assignRoles(Admin $admin, array $roleIds): void
+    public function assignRoles(Admin $admin, array $roleIds, int $operatorId, string $ip, string $userAgent): void
     {
-        $admin->roles()->sync($roleIds);
+        // 验证角色ID是否存在
+        if (!empty($roleIds)) {
+            $existingRoleIds = \App\Models\Role::whereIn('id', $roleIds)->pluck('id')->toArray();
+            $invalidRoleIds = array_diff($roleIds, $existingRoleIds);
+            
+            if (!empty($invalidRoleIds)) {
+                throw new \InvalidArgumentException('The selected role ids are invalid: ' . implode(', ', $invalidRoleIds));
+            }
+        }
+        
+        DB::transaction(function () use ($admin, $roleIds, $operatorId, $ip, $userAgent) {
+            // 同步角色关联
+            $admin->roles()->sync($roleIds);
+
+            // 记录操作日志
+            $this->recordAdminOperation(
+                '分配管理员角色',
+                [
+                    'admin_id' => $admin->id,
+                    'role_ids' => $roleIds,
+                    'operator_id' => $operatorId
+                ],
+                'POST',
+                'api/admins/' . $admin->id . '/roles',
+                $ip,
+                $userAgent
+            );
+        });
     }
 
     /**

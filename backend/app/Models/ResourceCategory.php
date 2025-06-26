@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ResourceCategory extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'name',
         'sort',
@@ -16,4 +18,4 @@ class ResourceCategory extends Model
     {
         return $this->hasMany(Resource::class, 'category_id');
     }
-} 
+}

@@ -105,14 +105,58 @@ class AdminController extends BaseController
      */
     public function assignRoles(Request $request, Admin $admin): JsonResponse
     {
-        $request->validate([
-            'role_ids' => 'required|array',
-            'role_ids.*' => 'exists:roles,id'
+        // 验证基本规则
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'role_ids' => 'present|array'
         ]);
+        
+        // 检查角色ID是否存在
+        if (!$validator->fails()) {
+            $roleIds = $request->role_ids ?? [];
+            if (!empty($roleIds)) {
+                // 确保类型一致性
+                $roleIds = array_map('intval', $roleIds);
+                $existingRoleIds = \App\Models\Role::whereIn('id', $roleIds)->pluck('id')->map(function($id) {
+                    return (int) $id;
+                })->toArray();
+                $invalidRoleIds = array_diff($roleIds, $existingRoleIds);
+                
+                if (!empty($invalidRoleIds)) {
+                    $validator->errors()->add('role_ids', 'The selected role ids is invalid.');
+                }
+            }
+        }
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 422,
+                'message' => 'Validation failed',
+                'data' => null,
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
-        $this->adminService->assignRoles($admin, $request->role_ids);
-
-        return $this->success(null, '分配角色成功');
+        try {
+            $this->adminService->assignRoles(
+                $admin,
+                $request->role_ids ?? [],
+                auth()->id(),
+                $request->ip(),
+                $request->userAgent()
+            );
+            
+            return $this->success(null, '分配角色成功');
+        } catch (\InvalidArgumentException $e) {
+            // 捕获角色ID验证失败的异常
+            $validator->errors()->add('role_ids', $e->getMessage());
+            
+            return response()->json([
+                'code' => 422,
+                'message' => 'Validation failed',
+                'data' => null,
+                'errors' => $validator->errors()
+            ], 422);
+        }
     }
 
     /**
