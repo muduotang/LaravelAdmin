@@ -1,14 +1,22 @@
 <?php
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+namespace Tests\Feature;
 
-uses(TestCase::class);
+use Tests\TestCase;
+use Illuminate\Foundation\Testing\WithFaker;
+
+uses(TestCase::class, WithFaker::class)
+    ->beforeEach(function () {
+        // 运行数据库迁移和填充
+        $this->artisan('migrate:fresh');
+        $this->artisan('db:seed');
+    })
+    ->in(__DIR__);
 
 test('管理员可以使用正确的凭证登录', function () {
     $response = $this->post('/api/auth/login', [
         'username' => 'admin',
-        'password' => 'admin123'
+        'password' => 'admin123',
     ]);
 
     $response->assertStatus(200)
@@ -17,12 +25,12 @@ test('管理员可以使用正确的凭证登录', function () {
             'code',
             'message',
             'data' => [
-                'access_token'
-            ]
+                'access_token',
+            ],
         ])
         ->assertJson([
             'status' => 'success',
-            'code' => 200
+            'code' => 200,
         ]);
 
     expect($response->json('data.access_token'))->toBeString()->not->toBeEmpty();
@@ -31,25 +39,25 @@ test('管理员可以使用正确的凭证登录', function () {
 test('管理员不能使用错误的凭证登录', function () {
     $response = $this->post('/api/auth/login', [
         'username' => 'admin',
-        'password' => 'wrong_password'
+        'password' => 'wrong_password',
     ]);
 
     $response->assertStatus(401)
         ->assertJsonStructure([
             'status',
             'code',
-            'message'
+            'message',
         ])
         ->assertJson([
             'status' => 'error',
-            'code' => 401
+            'code' => 401,
         ]);
 });
 
 test('登录请求必须包含用户名和密码', function () {
     // 测试缺少用户名
     $response = $this->post('/api/auth/login', [
-        'password' => 'admin123'
+        'password' => 'admin123',
     ]);
 
     $response->assertStatus(422)
@@ -58,13 +66,13 @@ test('登录请求必须包含用户名和密码', function () {
             'code',
             'message',
             'data' => [
-                'errors'
-            ]
+                'errors',
+            ],
         ]);
 
     // 测试缺少密码
     $response = $this->post('/api/auth/login', [
-        'username' => 'admin'
+        'username' => 'admin',
     ]);
 
     $response->assertStatus(422)
@@ -73,8 +81,8 @@ test('登录请求必须包含用户名和密码', function () {
             'code',
             'message',
             'data' => [
-                'errors'
-            ]
+                'errors',
+            ],
         ]);
 });
 
@@ -82,7 +90,7 @@ test('已登录管理员可以获取个人信息', function () {
     // 先登录获取 token
     $loginResponse = $this->post('/api/auth/login', [
         'username' => 'admin',
-        'password' => 'admin123'
+        'password' => 'admin123',
     ]);
 
     $token = $loginResponse->json('data.access_token');
@@ -101,12 +109,12 @@ test('已登录管理员可以获取个人信息', function () {
                 'email',
                 'nick_name',
                 'icon',
-                'roles'
-            ]
+                'roles',
+            ],
         ])
         ->assertJson([
             'status' => 'success',
-            'code' => 200
+            'code' => 200,
         ]);
 });
 
@@ -117,12 +125,12 @@ test('未登录用户不能访问受保护的路由', function () {
         ->assertJsonStructure([
             'status',
             'code',
-            'message'
+            'message',
         ])
         ->assertJson([
             'status' => 'error',
             'code' => 401,
-            'message' => '未经授权'
+            'message' => '未经授权',
         ]);
 });
 
@@ -130,7 +138,7 @@ test('已登录管理员可以刷新令牌', function () {
     // 先登录获取 token
     $loginResponse = $this->post('/api/auth/login', [
         'username' => 'admin',
-        'password' => 'admin123'
+        'password' => 'admin123',
     ]);
 
     $token = $loginResponse->json('data.access_token');
@@ -144,12 +152,12 @@ test('已登录管理员可以刷新令牌', function () {
             'code',
             'message',
             'data' => [
-                'access_token'
-            ]
+                'access_token',
+            ],
         ])
         ->assertJson([
             'status' => 'success',
-            'code' => 200
+            'code' => 200,
         ]);
 
     expect($response->json('data.access_token'))
@@ -162,7 +170,7 @@ test('已登录管理员可以退出登录', function () {
     // 先登录获取 token
     $loginResponse = $this->post('/api/auth/login', [
         'username' => 'admin',
-        'password' => 'admin123'
+        'password' => 'admin123',
     ]);
 
     $token = $loginResponse->json('data.access_token');
@@ -174,11 +182,11 @@ test('已登录管理员可以退出登录', function () {
         ->assertJsonStructure([
             'status',
             'code',
-            'message'
+            'message',
         ])
         ->assertJson([
             'status' => 'success',
-            'code' => 200
+            'code' => 200,
         ]);
 
     // 验证使用已登出的 token 无法访问受保护的路由
@@ -187,11 +195,11 @@ test('已登录管理员可以退出登录', function () {
         ->assertJsonStructure([
             'status',
             'code',
-            'message'
+            'message',
         ])
         ->assertJson([
             'status' => 'error',
             'code' => 401,
-            'message' => '未经授权'
+            'message' => '未经授权',
         ]);
 });
