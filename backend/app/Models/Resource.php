@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Resource extends Model
 {
@@ -13,15 +15,25 @@ class Resource extends Model
         'description',
     ];
 
-    // 关联关系
-    public function category()
+    /**
+     * 资源分类
+     *
+     * @return BelongsTo
+     */
+    public function category(): BelongsTo
     {
         return $this->belongsTo(ResourceCategory::class, 'category_id');
     }
 
-    public function roles()
+    /**
+     * 角色
+     *
+     * @return BelongsToMany
+     */
+    public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'role_resource');
+        return $this->belongsToMany(Role::class, 'role_resource')
+            ->withTimestamps();
     }
 
     // 辅助方法

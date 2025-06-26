@@ -28,20 +28,12 @@ class RoleController extends BaseController
     /**
      * 获取角色列表
      *
-     * @param Request $request
      * @return JsonResponse
      */
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
-        $roles = $this->roleService->list($request->all());
-
-        return $this->success([
-            'items' => $roles->items(),
-            'total' => $roles->total(),
-            'current_page' => $roles->currentPage(),
-            'per_page' => $roles->perPage(),
-            'last_page' => $roles->lastPage(),
-        ]);
+        $roles = Role::all();
+        return $this->success($roles);
     }
 
     /**
@@ -52,14 +44,8 @@ class RoleController extends BaseController
      */
     public function store(RoleRequest $request): JsonResponse
     {
-        $role = $this->roleService->create(
-            $request->validated(),
-            $request->user('admin')->id,
-            $request->ip(),
-            $request->userAgent()
-        );
-
-        return $this->success($role, '角色创建成功');
+        $role = Role::create($request->validated());
+        return $this->success($role);
     }
 
     /**
@@ -71,69 +57,59 @@ class RoleController extends BaseController
      */
     public function update(RoleRequest $request, Role $role): JsonResponse
     {
-        $role = $this->roleService->update(
-            $role,
-            $request->validated(),
-            $request->user('admin')->id,
-            $request->ip(),
-            $request->userAgent()
-        );
-
-        return $this->success($role, '角色更新成功');
+        $role->update($request->validated());
+        return $this->success($role);
     }
 
     /**
      * 删除角色
      *
-     * @param Request $request
      * @param Role $role
      * @return JsonResponse
      */
-    public function destroy(Request $request, Role $role): JsonResponse
+    public function destroy(Role $role): JsonResponse
     {
-        $this->roleService->delete(
-            $role,
-            $request->user('admin')->id,
-            $request->ip(),
-            $request->userAgent()
-        );
+        if ($role->admins()->exists()) {
+            return $this->error('该角色下还有管理员，无法删除');
+        }
 
-        return $this->success(null, '角色删除成功');
+        $role->delete();
+        return $this->success();
     }
 
     /**
-     * 分配权限给角色
+     * 分配菜单给角色
      *
      * @param Request $request
      * @param Role $role
      * @return JsonResponse
      */
-    public function assignPermissions(Request $request, Role $role): JsonResponse
+    public function assignMenus(Request $request, Role $role): JsonResponse
     {
         $this->validate($request, [
-            'permission_ids' => 'required|array',
-            'permission_ids.*' => 'required|integer|exists:permissions,id',
+            'menu_ids' => 'required|array',
+            'menu_ids.*' => 'required|integer|exists:menus,id',
         ]);
 
-        $this->roleService->assignPermissions(
-            $role,
-            $request->input('permission_ids'),
-            $request->ip(),
-            $request->userAgent()
-        );
-
-        return $this->success(null, '权限分配成功');
+        $role->menus()->sync($request->input('menu_ids'));
+        return $this->success();
     }
 
     /**
-     * 获取角色的权限列表
+     * 分配资源给角色
      *
+     * @param Request $request
      * @param Role $role
      * @return JsonResponse
      */
-    public function getPermissions(Role $role): JsonResponse
+    public function assignResources(Request $request, Role $role): JsonResponse
     {
-        $permissions = $this->roleService->getPermissions($role);
-        return $this->success($permissions);
+        $this->validate($request, [
+            'resource_ids' => 'required|array',
+            'resource_ids.*' => 'required|integer|exists:resources,id',
+        ]);
+
+        $role->resources()->sync($request->input('resource_ids'));
+        return $this->success();
     }
 }

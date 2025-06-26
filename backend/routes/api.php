@@ -3,6 +3,9 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\MenuController;
+use App\Http\Controllers\Api\ResourceCategoryController;
+use App\Http\Controllers\Api\ResourceController;
 use App\Http\Controllers\Api\RoleController;
 
 /*
@@ -24,13 +27,25 @@ Route::prefix('auth')->group(function () {
         Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::post('refresh', [AuthController::class, 'refresh'])->name('auth.refresh');
         Route::get('me', [AuthController::class, 'me'])->name('auth.me');
-        Route::put('me', [AuthController::class, 'update'])->name('auth.update');
+        Route::put('me', [AuthController::class, 'updateProfile'])->name('auth.updateProfile');
     });
 });
 
 // 角色管理路由
 Route::middleware('auth:admin')->group(function () {
     Route::apiResource('roles', RoleController::class);
+    Route::post('roles/{role}/resources', [RoleController::class, 'assignResources'])->name('roles.assignResources');
+    Route::post('roles/{role}/menus', [RoleController::class, 'assignMenus'])->name('roles.assignMenus');
+    
+    // 菜单管理
+    Route::get('menus/tree', [MenuController::class, 'tree'])->name('menus.tree');
+    Route::apiResource('menus', MenuController::class);
+    
+    // 资源分类管理
+    Route::apiResource('resource-categories', ResourceCategoryController::class);
+    
+    // 资源管理
+    Route::apiResource('resources', ResourceController::class);
 });
 
 // 默认重定向到最新版本

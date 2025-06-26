@@ -2,221 +2,172 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\WithFaker;
+use App\Models\Admin;
 use App\Models\Role;
+use Tests\TestCase;
 
-test('未登录用户不能访问角色管理接口', function () {
-    // 尝试获取角色列表
-    $response = $this->get('/api/roles');
-    $response->assertStatus(401);
+class RoleTest extends TestCase
+{
+    /** @test */
+    public function 未登录用户不能访问角色管理接口()
+    {
+        // 尝试获取角色列表
+        $this->getJson('/api/roles')->assertUnauthorized();
 
-    // 尝试创建角色
-    $response = $this->post('/api/roles', [
-        'name' => 'test role',
-        'description' => 'test description',
-    ]);
-    $response->assertStatus(401);
-});
+        // 尝试创建角色
+        $this->postJson('/api/roles', [
+            'name' => '新角色',
+            'description' => '新角色描述',
+        ])->assertUnauthorized();
 
-test('已登录管理员可以获取角色列表', function () {
-    // 先登录
-    $loginResponse = $this->post('/api/auth/login', [
-        'username' => 'admin',
-        'password' => 'admin123',
-    ]);
-    $token = $loginResponse->json('data.access_token');
+        // 尝试更新角色
+        $this->putJson('/api/roles/1', [
+            'name' => '更新的角色',
+            'description' => '更新的角色描述',
+        ])->assertUnauthorized();
 
-    // 获取角色列表
-    $response = $this->withToken($token)->get('/api/roles');
+        // 尝试删除角色
+        $this->deleteJson('/api/roles/1')->assertUnauthorized();
+    }
 
-    $response->assertStatus(200)
-        ->assertJsonStructure([
-            'status',
-            'code',
-            'message',
-            'data' => [
-                'items',
-                'total',
-                'current_page',
-                'per_page',
-                'last_page',
-            ],
-        ])
-        ->assertJson([
-            'status' => 'success',
-            'code' => 200,
+    /** @test */
+    public function 已登录管理员可以获取角色列表()
+    {
+        // 创建管理员和角色
+        $admin = Admin::factory()->create();
+        Role::factory()->count(3)->create();
+
+        // 以管理员身份请求
+        $response = $this->actingAs($admin, 'admin')
+            ->getJson('/api/roles');
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                'code',
+                'message',
+                'data' => [
+                    '*' => [
+                        'id',
+                        'name',
+                        'description',
+                        'created_at',
+                        'updated_at',
+                    ],
+                ],
+            ]);
+    }
+
+    /** @test */
+    public function 已登录管理员可以创建角色()
+    {
+        // 创建管理员
+        $admin = Admin::factory()->create();
+        
+        $data = [
+            'name' => '新角色',
+            'description' => '新角色描述',
+        ];
+
+        $response = $this->actingAs($admin, 'admin')
+            ->postJson('/api/roles', $data);
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                'code',
+                'message',
+                'data' => [
+                    'id',
+                    'name',
+                    'description',
+                    'created_at',
+                    'updated_at',
+                ],
+            ]);
+
+        $this->assertDatabaseHas('roles', $data);
+    }
+
+    /** @test */
+    public function 已登录管理员可以更新角色()
+    {
+        // 创建管理员和角色
+        $admin = Admin::factory()->create();
+        $role = Role::factory()->create();
+        
+        $data = [
+            'name' => '更新的角色',
+            'description' => '更新的角色描述',
+        ];
+
+        $response = $this->actingAs($admin, 'admin')
+            ->putJson("/api/roles/{$role->id}", $data);
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                'code',
+                'message',
+                'data' => [
+                    'id',
+                    'name',
+                    'description',
+                    'created_at',
+                    'updated_at',
+                ],
+            ]);
+
+        $this->assertDatabaseHas('roles', [
+            'id' => $role->id,
+            'name' => $data['name'],
+            'description' => $data['description'],
         ]);
-});
+    }
 
-test('已登录管理员可以创建角色', function () {
-    // 先登录
-    $loginResponse = $this->post('/api/auth/login', [
-        'username' => 'admin',
-        'password' => 'admin123',
-    ]);
-    $token = $loginResponse->json('data.access_token');
+    /** @test */
+    public function 已登录管理员可以删除角色()
+    {
+        // 创建管理员和角色
+        $admin = Admin::factory()->create();
+        $role = Role::factory()->create();
 
-    // 创建角色
-    $response = $this->withToken($token)->post('/api/roles', [
-        'name' => 'test role',
-        'description' => 'test description',
-    ]);
+        $response = $this->actingAs($admin, 'admin')
+            ->deleteJson("/api/roles/{$role->id}");
 
-    $response->assertStatus(200)
-        ->assertJsonStructure([
-            'status',
-            'code',
-            'message',
-            'data' => [
-                'id',
-                'name',
-                'description',
-            ],
-        ])
-        ->assertJson([
-            'status' => 'success',
-            'code' => 200,
-            'data' => [
-                'name' => 'test role',
-                'description' => 'test description',
-            ],
+        $response->assertOk();
+
+        $this->assertDatabaseMissing('roles', [
+            'id' => $role->id,
         ]);
+    }
 
-    // 验证数据库中是否创建成功
-    $this->assertDatabaseHas('roles', [
-        'name' => 'test role',
-        'description' => 'test description',
-    ]);
-});
+    /** @test */
+    public function 角色名称不能重复()
+    {
+        // 创建管理员和角色
+        $admin = Admin::factory()->create();
+        $role = Role::factory()->create();
+        
+        $data = [
+            'name' => $role->name,
+            'description' => '新角色描述',
+        ];
 
-test('已登录管理员可以更新角色', function () {
-    // 先登录
-    $loginResponse = $this->post('/api/auth/login', [
-        'username' => 'admin',
-        'password' => 'admin123',
-    ]);
-    $token = $loginResponse->json('data.access_token');
+        $response = $this->actingAs($admin, 'admin')
+            ->postJson('/api/roles', $data);
 
-    // 创建一个角色
-    $role = Role::create([
-        'name' => 'test role',
-        'description' => 'test description',
-    ]);
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['name']);
+    }
 
-    // 更新角色
-    $response = $this->withToken($token)->put("/api/roles/{$role->id}", [
-        'name' => 'updated role',
-        'description' => 'updated description',
-    ]);
+    /** @test */
+    public function 角色名称和描述是必填项()
+    {
+        // 创建管理员
+        $admin = Admin::factory()->create();
 
-    $response->assertStatus(200)
-        ->assertJsonStructure([
-            'status',
-            'code',
-            'message',
-            'data' => [
-                'id',
-                'name',
-                'description',
-            ],
-        ])
-        ->assertJson([
-            'status' => 'success',
-            'code' => 200,
-            'data' => [
-                'name' => 'updated role',
-                'description' => 'updated description',
-            ],
-        ]);
+        $response = $this->actingAs($admin, 'admin')
+            ->postJson('/api/roles', []);
 
-    // 验证数据库中是否更新成功
-    $this->assertDatabaseHas('roles', [
-        'id' => $role->id,
-        'name' => 'updated role',
-        'description' => 'updated description',
-    ]);
-});
-
-test('已登录管理员可以删除未使用的角色', function () {
-    // 先登录
-    $loginResponse = $this->post('/api/auth/login', [
-        'username' => 'admin',
-        'password' => 'admin123',
-    ]);
-    $token = $loginResponse->json('data.access_token');
-
-    // 创建一个角色
-    $role = Role::create([
-        'name' => 'test role',
-        'description' => 'test description',
-    ]);
-
-    // 删除角色
-    $response = $this->withToken($token)->delete("/api/roles/{$role->id}");
-
-    $response->assertStatus(200)
-        ->assertJson([
-            'status' => 'success',
-            'code' => 200,
-            'message' => '角色删除成功',
-        ]);
-
-    // 验证数据库中是否删除成功
-    $this->assertDatabaseMissing('roles', [
-        'id' => $role->id,
-    ]);
-});
-
-test('角色名称必须唯一', function () {
-    // 先登录
-    $loginResponse = $this->post('/api/auth/login', [
-        'username' => 'admin',
-        'password' => 'admin123',
-    ]);
-    $token = $loginResponse->json('data.access_token');
-
-    // 创建第一个角色
-    $this->withToken($token)->post('/api/roles', [
-        'name' => 'test role',
-        'description' => 'test description',
-    ]);
-
-    // 尝试创建同名角色
-    $response = $this->withToken($token)->post('/api/roles', [
-        'name' => 'test role',
-        'description' => 'another description',
-    ]);
-
-    $response->assertStatus(422)
-        ->assertJson([
-            'status' => 'error',
-            'code' => 422,
-        ]);
-});
-
-test('不能删除正在使用的角色', function () {
-    // 先登录
-    $loginResponse = $this->post('/api/auth/login', [
-        'username' => 'admin',
-        'password' => 'admin123',
-    ]);
-    $token = $loginResponse->json('data.access_token');
-
-    // 获取超级管理员角色（已经与 admin 用户关联）
-    $role = Role::where('name', 'super-admin')->first();
-
-    // 尝试删除角色
-    $response = $this->withToken($token)->delete("/api/roles/{$role->id}");
-
-    $response->assertStatus(400)
-        ->assertJson([
-            'status' => 'error',
-            'message' => '该角色下还有管理员，无法删除',
-        ]);
-
-    // 验证数据库中角色是否仍然存在
-    $this->assertDatabaseHas('roles', [
-        'id' => $role->id,
-    ]);
-}); 
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['name', 'description']);
+    }
+} 

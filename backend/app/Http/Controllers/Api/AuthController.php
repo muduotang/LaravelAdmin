@@ -33,24 +33,30 @@ class AuthController extends BaseController
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        $data = $this->authService->login(
-            $request->validated(),
-            $request->ip(),
-            $request->userAgent()
-        );
-
-        return $this->success($data, '登录成功');
+        $token = $this->authService->login($request->validated());
+        return $this->success(['token' => $token]);
     }
 
     /**
-     * 获取当前登录用户信息
+     * 管理员退出
+     *
+     * @return JsonResponse
+     */
+    public function logout(): JsonResponse
+    {
+        $this->authService->logout();
+        return $this->success();
+    }
+
+    /**
+     * 获取当前管理员信息
      *
      * @return JsonResponse
      */
     public function me(): JsonResponse
     {
-        $data = $this->authService->getCurrentUser();
-        return $this->success($data, '获取个人信息成功');
+        $admin = $this->authService->getCurrentAdmin();
+        return $this->success($admin);
     }
 
     /**
@@ -65,31 +71,14 @@ class AuthController extends BaseController
     }
 
     /**
-     * 退出登录
-     *
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function logout(Request $request): JsonResponse
-    {
-        $this->authService->logout($request->ip(), $request->userAgent());
-        return $this->success(null, '退出登录成功');
-    }
-
-    /**
      * 修改认证用户数据
      *
      * @param UpdateProfileRequest $request
      * @return JsonResponse
      */
-    public function update(UpdateProfileRequest $request): JsonResponse
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
     {
-        $data = $this->authService->updateProfile(
-            $request->validated(),
-            $request->ip(),
-            $request->userAgent()
-        );
-
-        return $this->success($data, '个人信息更新成功');
+        $admin = $this->authService->updateProfile($request->validated());
+        return $this->success($admin);
     }
 }

@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
 class Admin extends Authenticatable implements JWTSubject
 {
-    use Notifiable;
+    use HasFactory, Notifiable;
 
     protected $fillable = [
         'username',
@@ -25,24 +27,38 @@ class Admin extends Authenticatable implements JWTSubject
     ];
 
     protected $casts = [
-        'status' => 'boolean',
+        'status' => 'integer',
     ];
 
-    // JWT 相关方法
-    public function getJWTIdentifier()
+    /**
+     * 角色
+     *
+     * @return BelongsToMany
+     */
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'admin_role')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the identifier that will be stored in the subject claim of the JWT.
+     *
+     * @return mixed
+     */
+    public function getJWTIdentifier(): mixed
     {
         return $this->getKey();
     }
 
-    public function getJWTCustomClaims()
+    /**
+     * Return a key value array, containing any custom claims to be added to the JWT.
+     *
+     * @return array
+     */
+    public function getJWTCustomClaims(): array
     {
         return [];
-    }
-
-    // 关联关系
-    public function roles()
-    {
-        return $this->belongsToMany(Role::class, 'admin_role');
     }
 
     public function operationLogs()
