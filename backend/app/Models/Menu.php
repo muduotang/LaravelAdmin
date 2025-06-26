@@ -2,10 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Menu extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'parent_id',
         'title',
@@ -22,20 +27,35 @@ class Menu extends Model
         'keep_alive' => 'boolean',
     ];
 
-    // 关联关系
-    public function parent()
+    /**
+     * 父级菜单
+     *
+     * @return BelongsTo
+     */
+    public function parent(): BelongsTo
     {
         return $this->belongsTo(Menu::class, 'parent_id');
     }
 
-    public function children()
+    /**
+     * 子菜单
+     *
+     * @return HasMany
+     */
+    public function children(): HasMany
     {
         return $this->hasMany(Menu::class, 'parent_id');
     }
 
-    public function roles()
+    /**
+     * 角色
+     *
+     * @return BelongsToMany
+     */
+    public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'role_menu');
+        return $this->belongsToMany(Role::class, 'role_menu')
+            ->withTimestamps();
     }
 
     // 递归获取所有子菜单
@@ -49,4 +69,4 @@ class Menu extends Model
     {
         return $this->parent()->with('getAllParents');
     }
-} 
+}
