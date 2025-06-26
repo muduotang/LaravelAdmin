@@ -1,0 +1,26 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Laravel Admin 项目概述
+
+这是一个基于 Laravel 框架开发的前后端分离的后台管理系统。
+
+## 项目结构
+- [backend/](mdc:backend) - Laravel 后端项目
+- [frontend/](mdc:frontend) - 前端项目
+- [Laravel 前后端分离后台管理系统开发文档.md](mdc:Laravel 前后端分离后台管理系统开发文档.md) - 系统开发文档
+- [Laravel 后台权限管理设计文档.md](mdc:Laravel 后台权限管理设计文档.md) - 权限管理设计文档
+- [开发计划.md](mdc:开发计划.md) - 项目开发计划
+
+## 核心功能模块
+1. 用户认证与授权 - [AuthController.php](mdc:backend/app/Http/Controllers/Api/AuthController.php)
+2. RBAC 权限管理
+   - [Admin.php](mdc:backend/app/Models/Admin.php) - 管理员模型，系统用户管理
+   - [Role.php](mdc:backend/app/Models/Role.php) - 角色模型，角色权限管理
+   - [Menu.php](mdc:backend/app/Models/Menu.php) - 菜单模型，系统菜单管理
+   - [Resource.php](mdc:backend/app/Models/Resource.php) - 资源模型，API 接口资源管理
+   - [ResourceCategory.php](mdc:backend/app/Models/ResourceCategory.php) - 资源分类模型，API 接口资源分类
+   - [AdminOperationLog.php](mdc:backend/app/Models/AdminOperationLog.php) - 操作日志模型，记录管理员操作
+3. API 响应处理 - [ApiResponse.php](mdc:backend/app/Traits/ApiResponse.php)

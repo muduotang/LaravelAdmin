@@ -1,0 +1,21 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 后端开发规范
+
+## 目录结构
+- [app/Http/Controllers/Api/](mdc:backend/app/Http/Controllers/Api) - API 控制器目录
+  - 所有 API 控制器需继承 [BaseController](mdc:backend/app/Http/Controllers/Api/BaseController.php)
+- [app/Models/](mdc:backend/app/Models) - 数据模型目录
+- [app/Http/Resources/](mdc:backend/app/Http/Resources) - API 资源转换器目录
+  - 所有资源类需继承 [BaseResource](mdc:backend/app/Http/Resources/BaseResource.php)
+- [app/Traits/](mdc:backend/app/Traits) - 复用特性目录
+- [routes/api.php](mdc:backend/routes/api.php) - API 路由配置文件
+
+## 开发规范
+1. API 响应格式统一使用 [ApiResponse](mdc:backend/app/Traits/ApiResponse.php) trait
+2. API 版本控制通过 [ApiVersion](mdc:backend/app/Http/Middleware/ApiVersion.php) 中间件实现
+3. 认证相关功能在 [AuthController](mdc:backend/app/Http/Controllers/Api/AuthController.php) 中实现
+4. 使用 [tests/Feature/](mdc:backend/tests/Feature) 编写功能测试

@@ -1,0 +1,25 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 数据库设计规范
+
+## 数据库迁移
+所有数据库迁移文件位于 [database/migrations/](mdc:backend/database/migrations) 目录：
+
+1. [2024_06_25_000001_create_admin_tables.php](mdc:backend/database/migrations/2024_06_25_000001_create_admin_tables.php) - 管理后台相关表
+
+## 数据填充
+- [database/seeders/](mdc:backend/database/seeders) - 数据填充文件目录
+  - [AdminTableSeeder.php](mdc:backend/database/seeders/AdminTableSeeder.php) - 管理员初始数据
+  - [DatabaseSeeder.php](mdc:backend/database/seeders/DatabaseSeeder.php) - 主数据填充文件
+
+## 数据模型
+核心数据模型：
+1. [Admin.php](mdc:backend/app/Models/Admin.php) - 管理员模型
+2. [Role.php](mdc:backend/app/Models/Role.php) - 角色模型
+3. [Menu.php](mdc:backend/app/Models/Menu.php) - 菜单模型
+4. [Resource.php](mdc:backend/app/Models/Resource.php) - 资源模型
+5. [ResourceCategory.php](mdc:backend/app/Models/ResourceCategory.php) - 资源分类模型
+6. [AdminOperationLog.php](mdc:backend/app/Models/AdminOperationLog.php) - 操作日志模型
