@@ -353,4 +353,43 @@ class AdminTest extends TestCase
         $response = $this->getJson('/api/admins');
         $response->assertStatus(401);
     }
+
+    /** @test */
+    public function 管理员分配角色时角色ID必须存在()
+    {
+        $admin = Admin::factory()->create();
+        $targetAdmin = Admin::factory()->create();
+        
+        $data = [
+            'role_ids' => [999, 1000], // 不存在的角色ID
+        ];
+
+        $response = $this->actingAs($admin, 'admin')
+            ->postJson("/api/admins/{$targetAdmin->id}/roles", $data);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['role_ids']);
+    }
+
+    /** @test */
+    public function 管理员可以清空其他管理员的角色()
+    {
+        $admin = Admin::factory()->create();
+        $targetAdmin = Admin::factory()->create();
+        $roles = Role::factory()->count(2)->create();
+        
+        // 先分配角色
+        $targetAdmin->roles()->sync($roles->pluck('id'));
+        
+        // 清空角色
+        $response = $this->actingAs($admin, 'admin')
+            ->postJson("/api/admins/{$targetAdmin->id}/roles", [
+                'role_ids' => [],
+            ]);
+
+        $response->assertOk();
+        
+        // 验证角色已清空
+        $this->assertEquals(0, $targetAdmin->fresh()->roles()->count());
+    }
 }

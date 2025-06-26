@@ -170,4 +170,117 @@ class RoleTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['name', 'description']);
     }
-} 
+
+    /** @test */
+    public function 已登录管理员可以为角色分配菜单()
+    {
+        // 创建管理员、角色和菜单
+        $admin = Admin::factory()->create();
+        $role = Role::factory()->create();
+        $menus = Menu::factory()->count(3)->create();
+        
+        $data = [
+            'menu_ids' => $menus->pluck('id')->toArray(),
+        ];
+
+        $response = $this->actingAs($admin, 'admin')
+            ->postJson("/api/roles/{$role->id}/menus", $data);
+
+        $response->assertOk()
+            ->assertJson([
+                'code' => 200,
+                'message' => '菜单分配成功',
+            ]);
+
+        // 验证数据库中的关联关系
+        foreach ($menus as $menu) {
+            $this->assertDatabaseHas('role_menus', [
+                'role_id' => $role->id,
+                'menu_id' => $menu->id,
+            ]);
+        }
+    }
+
+    /** @test */
+    public function 已登录管理员可以为角色分配资源()
+    {
+        // 创建管理员、角色、资源分类和资源
+        $admin = Admin::factory()->create();
+        $role = Role::factory()->create();
+        $category = ResourceCategory::factory()->create();
+        $resources = Resource::factory()->count(3)->create([
+            'category_id' => $category->id,
+        ]);
+        
+        $data = [
+            'resource_ids' => $resources->pluck('id')->toArray(),
+        ];
+
+        $response = $this->actingAs($admin, 'admin')
+            ->postJson("/api/roles/{$role->id}/resources", $data);
+
+        $response->assertOk()
+            ->assertJson([
+                'code' => 200,
+                'message' => '资源分配成功',
+            ]);
+
+        // 验证数据库中的关联关系
+        foreach ($resources as $resource) {
+            $this->assertDatabaseHas('role_resources', [
+                'role_id' => $role->id,
+                'resource_id' => $resource->id,
+            ]);
+        }
+    }
+
+    /** @test */
+    public function 分配菜单时菜单ID必须存在()
+    {
+        $admin = Admin::factory()->create();
+        $role = Role::factory()->create();
+        
+        $data = [
+            'menu_ids' => [999, 1000], // 不存在的菜单ID
+        ];
+
+        $response = $this->actingAs($admin, 'admin')
+            ->postJson("/api/roles/{$role->id}/menus", $data);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['menu_ids']);
+    }
+
+    /** @test */
+    public function 分配资源时资源ID必须存在()
+    {
+        $admin = Admin::factory()->create();
+        $role = Role::factory()->create();
+        
+        $data = [
+            'resource_ids' => [999, 1000], // 不存在的资源ID
+        ];
+
+        $response = $this->actingAs($admin, 'admin')
+            ->postJson("/api/roles/{$role->id}/resources", $data);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['resource_ids']);
+    }
+
+    /** @test */
+    public function 未登录用户不能分配角色权限()
+    {
+        $role = Role::factory()->create();
+        
+        // 尝试分配菜单
+        $this->postJson("/api/roles/{$role->id}/menus", [
+            'menu_ids' => [1, 2],
+        ])->assertUnauthorized();
+
+        // 尝试分配资源
+        $this->postJson("/api/roles/{$role->id}/resources", [
+            'resource_ids' => [1, 2],
+        ])->assertUnauthorized();
+    }
+}
