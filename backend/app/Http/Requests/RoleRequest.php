@@ -23,7 +23,7 @@ class RoleRequest extends FormRequest
     {
         $rules = [
             'name' => 'required|string|max:50',
-            'description' => 'nullable|string|max:255',
+            'description' => 'required|string|max:255',
         ];
 
         // 创建时检查唯一性
@@ -50,7 +50,8 @@ class RoleRequest extends FormRequest
             'name.required' => '角色名称不能为空',
             'name.max' => '角色名称不能超过50个字符',
             'name.unique' => '角色名称已存在',
+            'description.required' => '角色描述不能为空',
             'description.max' => '角色描述不能超过255个字符',
         ];
     }
-} 
+}

@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\ResourceCategoryController;
 use App\Http\Controllers\Api\ResourceController;
@@ -31,8 +32,15 @@ Route::prefix('auth')->group(function () {
     });
 });
 
-// 角色管理路由
+// 需要认证的路由
 Route::middleware('auth:admin')->group(function () {
+    // 用户管理路由
+    Route::apiResource('admins', AdminController::class);
+    Route::post('admins/{admin}/roles', [AdminController::class, 'assignRoles'])->name('admins.assignRoles');
+    Route::post('admins/{admin}/reset-password', [AdminController::class, 'resetPassword'])->name('admins.resetPassword');
+    Route::post('admins/{admin}/status', [AdminController::class, 'updateStatus'])->name('admins.updateStatus');
+    
+    // 角色管理路由
     Route::apiResource('roles', RoleController::class);
     Route::post('roles/{role}/resources', [RoleController::class, 'assignResources'])->name('roles.assignResources');
     Route::post('roles/{role}/menus', [RoleController::class, 'assignMenus'])->name('roles.assignMenus');
