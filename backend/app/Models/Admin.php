@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
-use Illuminate\Support\Facades\Log;
 
 class Admin extends Authenticatable implements JWTSubject
 {
@@ -32,13 +31,11 @@ class Admin extends Authenticatable implements JWTSubject
     // JWT 相关方法
     public function getJWTIdentifier()
     {
-        Log::info('Getting JWT identifier', ['id' => $this->getKey()]);
         return $this->getKey();
     }
 
     public function getJWTCustomClaims()
     {
-        Log::info('Getting JWT custom claims');
         return [];
     }
 
