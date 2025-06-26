@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\RoleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,6 +26,11 @@ Route::prefix('auth')->group(function () {
         Route::get('me', [AuthController::class, 'me'])->name('auth.me');
         Route::put('me', [AuthController::class, 'update'])->name('auth.update');
     });
+});
+
+// 角色管理路由
+Route::middleware('auth:admin')->group(function () {
+    Route::apiResource('roles', RoleController::class);
 });
 
 // 默认重定向到最新版本
