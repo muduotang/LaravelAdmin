@@ -48,6 +48,16 @@ class Handler extends ExceptionHandler
             ], $e->getCode());
         });
 
+        // 处理管理员相关异常
+        $this->renderable(function (AdminException $e) {
+            return response()->json([
+                'status' => 'error',
+                'code' => $e->getCode(),
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], $e->getCode());
+        });
+
         // 处理模型未找到异常
         $this->renderable(function (ModelNotFoundException $e) {
             return response()->json([

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Admin;
+use App\Exceptions\AdminException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
@@ -116,9 +117,15 @@ class AdminService
      *
      * @param Admin $admin
      * @return bool
+     * @throws AdminException
      */
     public function deleteAdmin(Admin $admin): bool
     {
+        // 不能删除自己
+        if ($admin->id === auth('admin')->id()) {
+            throw AdminException::cannotDeleteSelf();
+        }
+
         return DB::transaction(function () use ($admin) {
             // 删除角色关联
             $admin->roles()->detach();
@@ -138,6 +145,24 @@ class AdminService
     public function assignRoles(Admin $admin, array $roleIds): void
     {
         $admin->roles()->sync($roleIds);
+    }
+
+    /**
+     * 更新管理员状态
+     *
+     * @param Admin $admin
+     * @param int $status
+     * @return bool
+     * @throws AdminException
+     */
+    public function updateStatus(Admin $admin, int $status): bool
+    {
+        // 不能禁用自己
+        if ($admin->id === auth('admin')->id() && $status == 0) {
+            throw AdminException::cannotDisableSelf();
+        }
+
+        return $admin->update(['status' => $status]);
     }
 
     /**

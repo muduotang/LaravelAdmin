@@ -91,11 +91,6 @@ class AdminController extends BaseController
      */
     public function destroy(Admin $admin): JsonResponse
     {
-        // 不能删除自己
-        if ($admin->id === auth('admin')->id()) {
-            return $this->error('不能删除自己', 400);
-        }
-
         $this->adminService->deleteAdmin($admin);
 
         return $this->success(null, '删除管理员成功');
@@ -153,12 +148,7 @@ class AdminController extends BaseController
             'status' => 'required|in:0,1'
         ]);
 
-        // 不能禁用自己
-        if ($admin->id === auth('admin')->id() && $request->status == 0) {
-            return $this->error('不能禁用自己', 400);
-        }
-
-        $admin->update(['status' => $request->status]);
+        $this->adminService->updateStatus($admin, $request->status);
 
         return $this->success(null, '更新状态成功');
     }
