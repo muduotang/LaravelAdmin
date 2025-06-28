@@ -230,6 +230,7 @@ class RoleService
      * @param string $ip
      * @param string $userAgent
      * @return void
+     * @throws BusinessException
      */
     public function assignResources(Role $role, array $resourceIds, int $adminId, string $ip, string $userAgent): void
     {
@@ -239,13 +240,17 @@ class RoleService
             $invalidResourceIds = array_diff($resourceIds, $existingResourceIds);
             
             if (!empty($invalidResourceIds)) {
-                throw new \InvalidArgumentException('The selected resource ids is invalid.');
+                throw new BusinessException('选择的资源不存在');
             }
         }
         
         DB::transaction(function () use ($role, $resourceIds, $adminId, $ip, $userAgent) {
-            // 同步资源关联
-            $role->resources()->sync($resourceIds);
+            // 先删除原有的资源
+            $role->resources()->detach();
+            // 添加新的资源
+            if (!empty($resourceIds)) {
+                $role->resources()->attach($resourceIds);
+            }
 
             // 记录操作日志
             $this->recordAdminOperation(

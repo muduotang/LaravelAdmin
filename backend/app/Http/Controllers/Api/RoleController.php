@@ -113,61 +113,21 @@ class RoleController extends BaseController
     /**
      * 分配资源给角色
      *
-     * @param Request $request
+     * @param AssignResourcesRequest $request
      * @param Role $role
      * @return JsonResponse
      */
-    public function assignResources(Request $request, Role $role): JsonResponse
+    public function assignResources(AssignResourcesRequest $request, Role $role): JsonResponse
     {
-        // 自定义验证逻辑
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'resource_ids' => 'present|array'
-        ]);
-        
-        // 检查resource_ids中的ID是否有效
-        if ($request->has('resource_ids')) {
-            $resourceIds = $request->resource_ids;
-            if (!empty($resourceIds)) {
-                $existingResourceIds = \App\Models\Resource::whereIn('id', $resourceIds)->pluck('id')->toArray();
-                $invalidResourceIds = array_diff($resourceIds, $existingResourceIds);
-                
-                if (!empty($invalidResourceIds)) {
-                    $validator->errors()->add('resource_ids', 'The selected resource ids is invalid.');
-                }
-            }
-        }
-        
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation failed.',
-                'data' => null,
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        $this->roleService->assignResources(
+            $role,
+            $request->validated('resource_ids'),
+            auth('admin')->id(),
+            $request->ip(),
+            $request->userAgent()
+        );
 
-        try {
-            $this->roleService->assignResources(
-                $role,
-                $request->input('resource_ids', []),
-                auth('admin')->id(),
-                $request->ip(),
-                $request->userAgent()
-            );
-
-            return $this->success(null, '资源分配成功');
-        } catch (\InvalidArgumentException $e) {
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation failed.',
-                'data' => null,
-                'errors' => ['resource_ids' => [$e->getMessage()]]
-            ], 422);
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->success(null, '资源分配成功');
     }
 
     /**

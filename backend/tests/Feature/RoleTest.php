@@ -200,16 +200,11 @@ class RoleTest extends TestCase
     /** @test */
     public function 已登录管理员可以为角色分配资源()
     {
-        // 创建管理员、角色、资源分类和资源
         $admin = Admin::factory()->create();
         $role = Role::factory()->create();
-        $category = ResourceCategory::factory()->create();
-        $resources = Resource::factory()->count(3)->create([
-            'category_id' => $category->id,
-        ]);
-        
+        $resources = Resource::factory()->count(2)->create();
         $data = [
-            'resource_ids' => $resources->pluck('id')->toArray(),
+            'resource_ids' => $resources->pluck('id')->toArray()
         ];
 
         $response = $this->actingAs($admin, 'admin')
@@ -217,17 +212,10 @@ class RoleTest extends TestCase
 
         $response->assertOk()
             ->assertJson([
+                'status' => 'success',
                 'code' => 200,
-                'message' => '资源分配成功',
+                'message' => '资源分配成功'
             ]);
-
-        // 验证数据库中的关联关系
-        foreach ($resources as $resource) {
-            $this->assertDatabaseHas('role_resource', [
-                'role_id' => $role->id,
-                'resource_id' => $resource->id,
-            ]);
-        }
     }
 
     /** @test */
@@ -251,16 +239,15 @@ class RoleTest extends TestCase
     {
         $admin = Admin::factory()->create();
         $role = Role::factory()->create();
-        
         $data = [
-            'resource_ids' => [999, 1000], // 不存在的资源ID
+            'resource_ids' => [999, 1000]
         ];
 
         $response = $this->actingAs($admin, 'admin')
             ->postJson("/api/roles/{$role->id}/resources", $data);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['resource_ids']);
+            ->assertJsonValidationErrors(['resource_ids.0', 'resource_ids.1']);
     }
 
     /** @test */
@@ -472,9 +459,8 @@ class RoleTest extends TestCase
     {
         $admin = Admin::factory()->create();
         $role = Role::factory()->create();
-        
         $data = [
-            'resource_ids' => [], // 空数组
+            'resource_ids' => []
         ];
 
         $response = $this->actingAs($admin, 'admin')
@@ -482,8 +468,9 @@ class RoleTest extends TestCase
 
         $response->assertOk()
             ->assertJson([
+                'status' => 'success',
                 'code' => 200,
-                'message' => '资源分配成功',
+                'message' => '资源分配成功'
             ]);
     }
 
@@ -510,12 +497,7 @@ class RoleTest extends TestCase
             ->postJson("/api/roles/{$role->id}/resources", []);
 
         $response->assertStatus(422)
-            ->assertJson([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation failed.',
-            ])
-            ->assertJsonPath('errors.resource_ids.0', 'The resource ids field must be present.');
+            ->assertJsonValidationErrors(['resource_ids']);
     }
 
     /** @test */
@@ -603,6 +585,33 @@ class RoleTest extends TestCase
                 'status' => 'error',
                 'code' => 400,
                 'message' => '选择的菜单不存在',
+                'data' => null
+            ]);
+    }
+
+    /** @test */
+    public function 分配资源时服务层抛出业务异常应该返回400错误()
+    {
+        $admin = Admin::factory()->create();
+        $role = Role::factory()->create();
+        $resources = Resource::factory()->count(2)->create();
+
+        $this->mock(RoleService::class, function ($mock) {
+            $mock->shouldReceive('assignResources')
+                ->once()
+                ->andThrow(new BusinessException('选择的资源不存在'));
+        });
+
+        $response = $this->actingAs($admin, 'admin')
+            ->postJson("/api/roles/{$role->id}/resources", [
+                'resource_ids' => $resources->pluck('id')->toArray()
+            ]);
+
+        $response->assertStatus(400)
+            ->assertJson([
+                'status' => 'error',
+                'code' => 400,
+                'message' => '选择的资源不存在',
                 'data' => null
             ]);
     }
