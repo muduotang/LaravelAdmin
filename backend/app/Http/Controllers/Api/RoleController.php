@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Models\Role;
 use App\Services\RoleService;
 use App\Http\Requests\RoleRequest;
+use App\Http\Requests\Role\AssignMenusRequest;
+use App\Http\Requests\Role\AssignResourcesRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -91,74 +93,22 @@ class RoleController extends BaseController
     /**
      * 分配菜单给角色
      *
-     * @param Request $request
+     * @param AssignMenusRequest $request
      * @param Role $role
      * @return JsonResponse
      */
-    public function assignMenus(Request $request, Role $role): JsonResponse
+    public function assignMenus(AssignMenusRequest $request, Role $role): JsonResponse
     {
-        // 自定义验证逻辑
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'menu_ids' => 'present|array'
-        ]);
-        
-        // 检查menu_ids中的ID是否有效
-        if ($request->has('menu_ids')) {
-            $menuIds = $request->menu_ids;
-            if (!empty($menuIds)) {
-                $existingMenuIds = \App\Models\Menu::whereIn('id', $menuIds)->pluck('id')->toArray();
-                $invalidMenuIds = array_diff($menuIds, $existingMenuIds);
-                
-                if (!empty($invalidMenuIds)) {
-                    $validator->errors()->add('menu_ids', 'The selected menu ids is invalid.');
-                }
-            }
-        }
-        
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation failed.',
-                'data' => null,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-        
-        try {
-            $this->roleService->assignMenus(
-                $role,
-                $request->input('menu_ids', []),
-                auth('admin')->id(),
-                $request->ip(),
-                $request->userAgent()
-            );
-        } catch (\InvalidArgumentException $e) {
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation failed.',
-                'data' => null,
-                'errors' => [
-                    'menu_ids' => [$e->getMessage()]
-                ]
-            ], 422);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'code' => 500,
-                'message' => 'Server error.',
-                'data' => null,
-                'errors' => [
-                    'message' => $e->getMessage()
-                ]
-            ], 500);
-        }
+        $this->roleService->assignMenus(
+            $role,
+            $request->validated('menu_ids'),
+            auth('admin')->id(),
+            $request->ip(),
+            $request->userAgent()
+        );
 
         return $this->success(null, '菜单分配成功');
     }
-
-
 
     /**
      * 分配资源给角色

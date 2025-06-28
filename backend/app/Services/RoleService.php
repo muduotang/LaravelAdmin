@@ -184,6 +184,7 @@ class RoleService
      * @param string $ip
      * @param string $userAgent
      * @return void
+     * @throws BusinessException
      */
     public function assignMenus(Role $role, array $menuIds, int $adminId, string $ip, string $userAgent): void
     {
@@ -193,13 +194,17 @@ class RoleService
             $invalidMenuIds = array_diff($menuIds, $existingMenuIds);
             
             if (!empty($invalidMenuIds)) {
-                throw new \InvalidArgumentException('The selected menu ids is invalid.');
+                throw new BusinessException('选择的菜单不存在');
             }
         }
         
         DB::transaction(function () use ($role, $menuIds, $adminId, $ip, $userAgent) {
-            // 同步菜单关联
-            $role->menus()->sync($menuIds);
+            // 先删除原有的菜单
+            $role->menus()->detach();
+            // 添加新的菜单
+            if (!empty($menuIds)) {
+                $role->menus()->attach($menuIds);
+            }
 
             // 记录操作日志
             $this->recordAdminOperation(
