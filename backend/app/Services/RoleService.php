@@ -261,21 +261,21 @@ class RoleService
      * 获取角色的所有菜单ID
      *
      * @param Role $role
-     * @return Collection
+     * @return \Illuminate\Support\Collection
      */
-    public function getMenus(Role $role): Collection
+    public function getMenus(Role $role): \Illuminate\Support\Collection
     {
-        return $role->menus()->pluck('id');
+        return $role->menus()->pluck('menus.id');
     }
 
     /**
      * 获取角色的所有资源ID
      *
      * @param Role $role
-     * @return Collection
+     * @return \Illuminate\Support\Collection
      */
-    public function getResources(Role $role): Collection
+    public function getResources(Role $role): \Illuminate\Support\Collection
     {
-        return $role->resources()->pluck('id');
+        return $role->resources()->pluck('resources.id');
     }
 }

@@ -49,6 +49,17 @@ class RoleController extends BaseController
     }
 
     /**
+     * 获取单个角色详情
+     *
+     * @param Role $role
+     * @return JsonResponse
+     */
+    public function show(Role $role): JsonResponse
+    {
+        return $this->success($role);
+    }
+
+    /**
      * 更新角色
      *
      * @param RoleRequest $request
@@ -88,13 +99,11 @@ class RoleController extends BaseController
     {
         // 自定义验证逻辑
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'menu_ids' => 'array'
+            'menu_ids' => 'present|array'
         ]);
         
-        // 检查menu_ids是否存在且为数组
-        if (!$request->has('menu_ids')) {
-            $validator->errors()->add('menu_ids', 'The menu ids field is required.');
-        } else {
+        // 检查menu_ids中的ID是否有效
+        if ($request->has('menu_ids')) {
             $menuIds = $request->menu_ids;
             if (!empty($menuIds)) {
                 $existingMenuIds = \App\Models\Menu::whereIn('id', $menuIds)->pluck('id')->toArray();
@@ -119,7 +128,7 @@ class RoleController extends BaseController
         try {
             $this->roleService->assignMenus(
                 $role,
-                $request->input('menu_ids'),
+                $request->input('menu_ids', []),
                 auth('admin')->id(),
                 $request->ip(),
                 $request->userAgent()
@@ -162,13 +171,11 @@ class RoleController extends BaseController
     {
         // 自定义验证逻辑
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'resource_ids' => 'array'
+            'resource_ids' => 'present|array'
         ]);
         
-        // 检查resource_ids是否存在且为数组
-        if (!$request->has('resource_ids')) {
-            $validator->errors()->add('resource_ids', 'The resource ids field is required.');
-        } else {
+        // 检查resource_ids中的ID是否有效
+        if ($request->has('resource_ids')) {
             $resourceIds = $request->resource_ids;
             if (!empty($resourceIds)) {
                 $existingResourceIds = \App\Models\Resource::whereIn('id', $resourceIds)->pluck('id')->toArray();
@@ -193,7 +200,7 @@ class RoleController extends BaseController
         try {
             $this->roleService->assignResources(
                 $role,
-                $request->input('resource_ids'),
+                $request->input('resource_ids', []),
                 auth('admin')->id(),
                 $request->ip(),
                 $request->userAgent()
@@ -209,7 +216,7 @@ class RoleController extends BaseController
                 'errors' => ['resource_ids' => [$e->getMessage()]]
             ], 422);
         } catch (\Exception $e) {
-            return $this->error($e->getMessage());
+            return $this->error($e->getMessage(), 500);
         }
     }
 
