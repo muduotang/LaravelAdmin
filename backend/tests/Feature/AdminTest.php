@@ -392,4 +392,357 @@ class AdminTest extends TestCase
         // 验证角色已清空
         $this->assertEquals(0, $targetAdmin->fresh()->roles()->count());
     }
+
+    /** @test */
+    public function 可以根据角色筛选管理员()
+    {
+        $role1 = Role::factory()->create(['name' => 'role1']);
+        $role2 = Role::factory()->create(['name' => 'role2']);
+        
+        $admin1 = Admin::factory()->create();
+        $admin2 = Admin::factory()->create();
+        $admin3 = Admin::factory()->create();
+        
+        $admin1->roles()->attach($role1);
+        $admin2->roles()->attach($role2);
+        // admin3 没有角色
+        
+        $response = $this->actingAs($this->admin, 'admin')
+            ->getJson("/api/admins?role_id={$role1->id}");
+            
+        $response->assertStatus(200);
+        
+        $data = $response->json('data.data');
+        $this->assertCount(1, $data);
+        $this->assertEquals($admin1->id, $data[0]['id']);
+    }
+
+    /** @test */
+    public function 管理员列表支持分页()
+    {
+        Admin::factory()->count(20)->create();
+        
+        $response = $this->actingAs($this->admin, 'admin')
+            ->getJson('/api/admins?per_page=5&page=2');
+            
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    'data',
+                    'current_page',
+                    'per_page',
+                    'total',
+                    'last_page'
+                ]
+            ]);
+            
+        $this->assertEquals(2, $response->json('data.current_page'));
+        $this->assertEquals(5, $response->json('data.per_page'));
+    }
+
+    /** @test */
+    public function 创建管理员时用户名格式必须正确()
+    {
+        $response = $this->actingAs($this->admin, 'admin')
+            ->postJson('/api/admins', [
+                'username' => 'invalid-username!', // 包含非法字符
+                'email' => 'test@test.com',
+                'password' => 'password123',
+                'password_confirmation' => 'password123',
+                'nick_name' => '测试用户',
+                'status' => 1
+            ]);
+            
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['username']);
+    }
+
+    /** @test */
+    public function 创建管理员时字段长度验证()
+    {
+        $response = $this->actingAs($this->admin, 'admin')
+            ->postJson('/api/admins', [
+                'username' => str_repeat('a', 51), // 超过50字符
+                'email' => str_repeat('a', 92) . '@test.com', // 超过100字符 (92+9=101)
+                'password' => '12345', // 少于6字符
+                'password_confirmation' => '12345',
+                'nick_name' => str_repeat('测', 51), // 超过50字符
+                'note' => str_repeat('备注', 251), // 超过500字符
+                'icon' => str_repeat('http://example.com/', 30), // 超过500字符 (18*30=540)
+                'status' => 1
+            ]);
+            
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors([
+                'username', 'email', 'password', 'nick_name', 'note', 'icon'
+            ]);
+    }
+
+    /** @test */
+    public function 创建管理员时邮箱格式必须正确()
+    {
+        $response = $this->actingAs($this->admin, 'admin')
+            ->postJson('/api/admins', [
+                'username' => 'testuser',
+                'email' => 'invalid-email', // 无效邮箱格式
+                'password' => 'password123',
+                'password_confirmation' => 'password123',
+                'nick_name' => '测试用户',
+                'status' => 1
+            ]);
+            
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['email']);
+    }
+
+    /** @test */
+    public function 创建管理员时状态值必须有效()
+    {
+        $response = $this->actingAs($this->admin, 'admin')
+            ->postJson('/api/admins', [
+                'username' => 'testuser',
+                'email' => 'test@test.com',
+                'password' => 'password123',
+                'password_confirmation' => 'password123',
+                'nick_name' => '测试用户',
+                'status' => 2 // 无效状态值
+            ]);
+            
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['status']);
+    }
+
+    /** @test */
+    public function 创建管理员时密码确认必须一致()
+    {
+        $response = $this->actingAs($this->admin, 'admin')
+            ->postJson('/api/admins', [
+                'username' => 'testuser',
+                'email' => 'test@test.com',
+                'password' => 'password123',
+                'password_confirmation' => 'different_password', // 密码确认不一致
+                'nick_name' => '测试用户',
+                'status' => 1
+            ]);
+            
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['password']);
+    }
+
+    /** @test */
+    public function 更新管理员时密码是可选的()
+    {
+        $testAdmin = Admin::factory()->create();
+        $originalPassword = $testAdmin->password;
+        
+        $response = $this->actingAs($this->admin, 'admin')
+            ->putJson("/api/admins/{$testAdmin->id}", [
+                'username' => 'updated_username',
+                'email' => 'updated@test.com',
+                'nick_name' => '更新的昵称',
+                'status' => 1
+                // 不提供密码
+            ]);
+            
+        $response->assertStatus(200);
+        
+        $testAdmin->refresh();
+        $this->assertEquals($originalPassword, $testAdmin->password); // 密码未改变
+    }
+
+    /** @test */
+    public function 更新管理员时可以修改密码()
+    {
+        $testAdmin = Admin::factory()->create();
+        $originalPassword = $testAdmin->password;
+        
+        $response = $this->actingAs($this->admin, 'admin')
+            ->putJson("/api/admins/{$testAdmin->id}", [
+                'username' => 'updated_username',
+                'email' => 'updated@test.com',
+                'nick_name' => '更新的昵称',
+                'password' => 'newpassword123',
+                'password_confirmation' => 'newpassword123',
+                'status' => 1
+            ]);
+            
+        $response->assertStatus(200);
+        
+        $testAdmin->refresh();
+        $this->assertNotEquals($originalPassword, $testAdmin->password); // 密码已改变
+        $this->assertTrue(Hash::check('newpassword123', $testAdmin->password));
+    }
+
+    /** @test */
+    public function 重置密码时密码长度必须符合要求()
+    {
+        $testAdmin = Admin::factory()->create();
+        
+        $response = $this->actingAs($this->admin, 'admin')
+            ->postJson("/api/admins/{$testAdmin->id}/reset-password", [
+                'password' => '12345', // 少于6字符
+                'password_confirmation' => '12345'
+            ]);
+            
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['password']);
+    }
+
+    /** @test */
+    public function 重置密码时确认密码必须一致()
+    {
+        $testAdmin = Admin::factory()->create();
+        
+        $response = $this->actingAs($this->admin, 'admin')
+            ->postJson("/api/admins/{$testAdmin->id}/reset-password", [
+                'password' => 'password123',
+                'password_confirmation' => 'different_password'
+            ]);
+            
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['password']);
+    }
+
+    /** @test */
+    public function 更新状态时状态值必须有效()
+    {
+        $testAdmin = Admin::factory()->create();
+        
+        $response = $this->actingAs($this->admin, 'admin')
+            ->postJson("/api/admins/{$testAdmin->id}/status", [
+                'status' => 2 // 无效状态值
+            ]);
+            
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['status']);
+    }
+
+    /** @test */
+    public function 访问不存在的管理员返回404()
+    {
+        $response = $this->actingAs($this->admin, 'admin')
+            ->getJson('/api/admins/99999');
+            
+        $response->assertStatus(404);
+    }
+
+    /** @test */
+    public function 更新不存在的管理员返回404()
+    {
+        $response = $this->actingAs($this->admin, 'admin')
+            ->putJson('/api/admins/99999', [
+                'username' => 'test',
+                'email' => 'test@test.com',
+                'nick_name' => '测试',
+                'status' => 1
+            ]);
+            
+        $response->assertStatus(404);
+    }
+
+    /** @test */
+    public function 删除不存在的管理员返回404()
+    {
+        $response = $this->actingAs($this->admin, 'admin')
+            ->deleteJson('/api/admins/99999');
+            
+        $response->assertStatus(404);
+    }
+
+    /** @test */
+    public function 分配角色时role_ids字段必须是数组()
+    {
+        $testAdmin = Admin::factory()->create();
+        
+        $response = $this->actingAs($this->admin, 'admin')
+            ->postJson("/api/admins/{$testAdmin->id}/roles", [
+                'role_ids' => 'not_an_array'
+            ]);
+            
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['role_ids']);
+    }
+
+    /** @test */
+    public function 分配角色时可以传递空数组清空角色()
+    {
+        $testAdmin = Admin::factory()->create();
+        $testAdmin->roles()->attach($this->role);
+        
+        $response = $this->actingAs($this->admin, 'admin')
+            ->postJson("/api/admins/{$testAdmin->id}/roles", [
+                'role_ids' => []
+            ]);
+            
+        $response->assertStatus(200);
+        
+        $testAdmin->refresh();
+        $this->assertEquals(0, $testAdmin->roles()->count());
+    }
+
+    /** @test */
+    public function 分配不存在角色时返回验证错误()
+    {
+        $testAdmin = Admin::factory()->create();
+        
+        $response = $this->actingAs($this->admin, 'admin')
+            ->postJson("/api/admins/{$testAdmin->id}/roles", [
+                'role_ids' => [99999] // 不存在的角色ID
+            ]);
+            
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['role_ids']);
+    }
+
+    /** @test */
+    public function 管理员列表可以同时使用多个筛选条件()
+    {
+        $role = Role::factory()->create();
+        $admin1 = Admin::factory()->create([
+            'username' => 'searchuser1',
+            'status' => 1
+        ]);
+        $admin2 = Admin::factory()->create([
+            'username' => 'searchuser2', 
+            'status' => 0
+        ]);
+        $admin3 = Admin::factory()->create([
+            'username' => 'otheruser',
+            'status' => 1
+        ]);
+        
+        $admin1->roles()->attach($role);
+        
+        // 同时使用关键词、状态和角色筛选
+        $response = $this->actingAs($this->admin, 'admin')
+            ->getJson("/api/admins?keyword=search&status=1&role_id={$role->id}");
+            
+        $response->assertStatus(200);
+        
+        $data = $response->json('data.data');
+        $this->assertCount(1, $data);
+        $this->assertEquals($admin1->id, $data[0]['id']);
+    }
+
+    /** @test */
+    public function 创建管理员时可以不分配角色()
+    {
+        $adminData = [
+            'username' => 'noroleadmin',
+            'email' => 'norole@test.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'nick_name' => '无角色管理员',
+            'status' => 1
+            // 不提供 role_ids
+        ];
+        
+        $response = $this->actingAs($this->admin, 'admin')
+            ->postJson('/api/admins', $adminData);
+            
+        $response->assertStatus(201);
+        
+        $newAdmin = Admin::where('username', 'noroleadmin')->first();
+        $this->assertEquals(0, $newAdmin->roles()->count());
+    }
 }
