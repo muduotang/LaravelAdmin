@@ -1,5 +1,537 @@
 ---
-description:
-globs:
+description: Vue Element Admin Plus 前端开发指南
+globs: ["frontend/**"]
 alwaysApply: false
 ---
+
+# Vue Element Admin Plus 前端开发指南
+
+## 技术栈
+
+### 核心框架
+- **Vue 3** - 渐进式 JavaScript 框架
+- **Element Plus** - 基于 Vue 3 的组件库
+- **TypeScript** - JavaScript 的超集，提供类型安全
+- **Vite** - 下一代前端构建工具
+
+### 开发工具
+- **Vue Router 4** - Vue.js 官方路由管理器
+- **Pinia** - Vue 3 状态管理库
+- **Axios** - HTTP 客户端
+- **ESLint + Prettier** - 代码规范和格式化
+
+## 项目结构
+
+```
+frontend/
+├── public/                 # 静态资源
+├── src/
+│   ├── api/               # API 接口定义
+│   ├── assets/            # 资源文件
+│   ├── components/        # 公共组件
+│   ├── hooks/             # 组合式函数
+│   ├── layout/            # 布局组件
+│   ├── locales/           # 国际化文件
+│   ├── router/            # 路由配置
+│   ├── stores/            # Pinia 状态管理
+│   ├── styles/            # 样式文件
+│   ├── types/             # TypeScript 类型定义
+│   ├── utils/             # 工具函数
+│   ├── views/             # 页面组件
+│   ├── App.vue            # 根组件
+│   └── main.ts            # 入口文件
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+└── README.md
+```
+
+## 开发规范
+
+### 1. 组件开发
+
+#### 组件命名
+- 使用 PascalCase 命名组件文件
+- 组件名应该具有描述性
+- 避免使用 HTML 标签名
+
+```typescript
+// ✅ 正确
+UserProfile.vue
+DataTable.vue
+SearchForm.vue
+
+// ❌ 错误
+user.vue
+table.vue
+form.vue
+```
+
+#### 组件结构
+```vue
+<template>
+  <div class="component-name">
+    <!-- 模板内容 -->
+  </div>
+</template>
+
+<script setup lang="ts">
+// 导入
+import { ref, computed, onMounted } from 'vue'
+import type { ComponentProps } from '@/types'
+
+// 接口定义
+interface Props {
+  title: string
+  data?: any[]
+}
+
+// Props
+const props = withDefaults(defineProps<Props>(), {
+  data: () => []
+})
+
+// Emits
+const emit = defineEmits<{
+  change: [value: string]
+  submit: [data: any]
+}>()
+
+// 响应式数据
+const loading = ref(false)
+
+// 计算属性
+const computedValue = computed(() => {
+  return props.data.length
+})
+
+// 方法
+const handleSubmit = () => {
+  emit('submit', { /* data */ })
+}
+
+// 生命周期
+onMounted(() => {
+  // 初始化逻辑
+})
+</script>
+
+<style scoped>
+.component-name {
+  /* 样式 */
+}
+</style>
+```
+
+### 2. API 接口管理
+
+#### 接口定义
+```typescript
+// src/api/user.ts
+import request from '@/utils/request'
+import type { User, UserListParams, ApiResponse } from '@/types'
+
+// 获取用户列表
+export const getUserList = (params: UserListParams): Promise<ApiResponse<User[]>> => {
+  return request({
+    url: '/api/users',
+    method: 'get',
+    params
+  })
+}
+
+// 创建用户
+export const createUser = (data: Partial<User>): Promise<ApiResponse<User>> => {
+  return request({
+    url: '/api/users',
+    method: 'post',
+    data
+  })
+}
+```
+
+#### 请求拦截器
+```typescript
+// src/utils/request.ts
+import axios from 'axios'
+import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+
+const request = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL,
+  timeout: 10000
+})
+
+// 请求拦截器
+request.interceptors.request.use(
+  (config) => {
+    const userStore = useUserStore()
+    if (userStore.token) {
+      config.headers.Authorization = `Bearer ${userStore.token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// 响应拦截器
+request.interceptors.response.use(
+  (response) => {
+    const { code, message, data } = response.data
+    if (code === 200) {
+      return data
+    } else {
+      ElMessage.error(message || '请求失败')
+      return Promise.reject(new Error(message))
+    }
+  },
+  (error) => {
+    ElMessage.error(error.message || '网络错误')
+    return Promise.reject(error)
+  }
+)
+
+export default request
+```
+
+### 3. 状态管理 (Pinia)
+
+```typescript
+// src/stores/user.ts
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import type { User } from '@/types'
+import { getUserInfo, login } from '@/api/auth'
+
+export const useUserStore = defineStore('user', () => {
+  // 状态
+  const token = ref<string>('')
+  const userInfo = ref<User | null>(null)
+  const permissions = ref<string[]>([])
+
+  // 计算属性
+  const isLoggedIn = computed(() => !!token.value)
+  const hasPermission = computed(() => (permission: string) => {
+    return permissions.value.includes(permission)
+  })
+
+  // 方法
+  const setToken = (newToken: string) => {
+    token.value = newToken
+    localStorage.setItem('token', newToken)
+  }
+
+  const setUserInfo = (info: User) => {
+    userInfo.value = info
+  }
+
+  const loginAction = async (credentials: LoginParams) => {
+    try {
+      const { token: newToken, user } = await login(credentials)
+      setToken(newToken)
+      setUserInfo(user)
+      return true
+    } catch (error) {
+      return false
+    }
+  }
+
+  const logout = () => {
+    token.value = ''
+    userInfo.value = null
+    permissions.value = []
+    localStorage.removeItem('token')
+  }
+
+  return {
+    token,
+    userInfo,
+    permissions,
+    isLoggedIn,
+    hasPermission,
+    setToken,
+    setUserInfo,
+    loginAction,
+    logout
+  }
+}, {
+  persist: {
+    key: 'user-store',
+    storage: localStorage,
+    paths: ['token', 'userInfo']
+  }
+})
+```
+
+### 4. 路由管理
+
+#### 路由配置
+```typescript
+// src/router/index.ts
+import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
+import Layout from '@/layout/index.vue'
+
+// 静态路由
+export const constantRoutes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/login/index.vue'),
+    meta: { hidden: true }
+  },
+  {
+    path: '/',
+    component: Layout,
+    redirect: '/dashboard',
+    children: [
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: () => import('@/views/dashboard/index.vue'),
+        meta: { title: '首页', icon: 'dashboard' }
+      }
+    ]
+  }
+]
+
+// 动态路由
+export const asyncRoutes: RouteRecordRaw[] = [
+  {
+    path: '/system',
+    component: Layout,
+    meta: { title: '系统管理', icon: 'system', roles: ['admin'] },
+    children: [
+      {
+        path: 'user',
+        name: 'SystemUser',
+        component: () => import('@/views/system/user/index.vue'),
+        meta: { title: '用户管理', roles: ['admin'] }
+      },
+      {
+        path: 'role',
+        name: 'SystemRole',
+        component: () => import('@/views/system/role/index.vue'),
+        meta: { title: '角色管理', roles: ['admin'] }
+      }
+    ]
+  }
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: constantRoutes
+})
+
+export default router
+```
+
+#### 路由守卫
+```typescript
+// src/router/permission.ts
+import router from './index'
+import { useUserStore } from '@/stores/user'
+import { usePermissionStore } from '@/stores/permission'
+import { ElMessage } from 'element-plus'
+
+const whiteList = ['/login', '/404']
+
+router.beforeEach(async (to, from, next) => {
+  const userStore = useUserStore()
+  const permissionStore = usePermissionStore()
+
+  if (userStore.token) {
+    if (to.path === '/login') {
+      next({ path: '/' })
+    } else {
+      if (!userStore.userInfo) {
+        try {
+          await userStore.getUserInfo()
+          const accessRoutes = await permissionStore.generateRoutes(userStore.roles)
+          accessRoutes.forEach(route => {
+            router.addRoute(route)
+          })
+          next({ ...to, replace: true })
+        } catch (error) {
+          userStore.logout()
+          ElMessage.error('获取用户信息失败')
+          next('/login')
+        }
+      } else {
+        next()
+      }
+    }
+  } else {
+    if (whiteList.includes(to.path)) {
+      next()
+    } else {
+      next('/login')
+    }
+  }
+})
+```
+
+### 5. 权限控制
+
+#### 指令权限
+```typescript
+// src/directives/permission.ts
+import type { Directive } from 'vue'
+import { useUserStore } from '@/stores/user'
+
+export const permission: Directive = {
+  mounted(el, binding) {
+    const { value } = binding
+    const userStore = useUserStore()
+    
+    if (value && value instanceof Array && value.length > 0) {
+      const hasPermission = value.some(permission => {
+        return userStore.permissions.includes(permission)
+      })
+      
+      if (!hasPermission) {
+        el.parentNode?.removeChild(el)
+      }
+    }
+  }
+}
+```
+
+#### 组件权限
+```vue
+<template>
+  <div>
+    <!-- 使用指令 -->
+    <el-button v-permission="['user:create']" @click="handleCreate">
+      新增用户
+    </el-button>
+    
+    <!-- 使用组合式函数 -->
+    <el-button v-if="hasPermission('user:edit')" @click="handleEdit">
+      编辑用户
+    </el-button>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { usePermission } from '@/hooks/usePermission'
+
+const { hasPermission } = usePermission()
+</script>
+```
+
+### 6. 国际化
+
+```typescript
+// src/locales/zh-cn.ts
+export default {
+  common: {
+    confirm: '确认',
+    cancel: '取消',
+    save: '保存',
+    delete: '删除',
+    edit: '编辑',
+    add: '新增'
+  },
+  menu: {
+    dashboard: '首页',
+    system: '系统管理',
+    user: '用户管理',
+    role: '角色管理'
+  }
+}
+```
+
+### 7. 主题定制
+
+```scss
+// src/styles/variables.scss
+:root {
+  // 主色调
+  --el-color-primary: #409eff;
+  --el-color-primary-light-3: #79bbff;
+  --el-color-primary-light-5: #a0cfff;
+  --el-color-primary-light-7: #c6e2ff;
+  --el-color-primary-light-8: #d9ecff;
+  --el-color-primary-light-9: #ecf5ff;
+  --el-color-primary-dark-2: #337ecc;
+  
+  // 成功色
+  --el-color-success: #67c23a;
+  
+  // 警告色
+  --el-color-warning: #e6a23c;
+  
+  // 危险色
+  --el-color-danger: #f56c6c;
+  
+  // 信息色
+  --el-color-info: #909399;
+}
+```
+
+## 开发流程
+
+### 1. 环境搭建
+```bash
+# 克隆项目
+git clone https://github.com/kailong321200875/vue-element-plus-admin.git frontend
+
+# 安装依赖
+cd frontend
+pnpm install
+
+# 启动开发服务器
+pnpm dev
+
+# 构建生产版本
+pnpm build
+```
+
+### 2. 开发规范
+- 使用 TypeScript 进行类型检查
+- 遵循 ESLint 和 Prettier 规范
+- 组件使用 Composition API
+- 状态管理使用 Pinia
+- 样式使用 SCSS
+- 国际化使用 Vue I18n
+
+### 3. 代码提交规范
+```bash
+# 功能开发
+git commit -m "feat: 添加用户管理功能"
+
+# 问题修复
+git commit -m "fix: 修复登录状态丢失问题"
+
+# 文档更新
+git commit -m "docs: 更新 API 文档"
+
+# 样式调整
+git commit -m "style: 调整按钮样式"
+
+# 重构代码
+git commit -m "refactor: 重构用户服务"
+```
+
+## 最佳实践
+
+### 1. 性能优化
+- 使用 `defineAsyncComponent` 进行组件懒加载
+- 合理使用 `v-memo` 和 `v-once`
+- 避免在模板中使用复杂计算
+- 使用 `shallowRef` 和 `shallowReactive` 优化大对象
+
+### 2. 安全考虑
+- 对用户输入进行验证和转义
+- 使用 HTTPS 传输敏感数据
+- 实施 CSP (Content Security Policy)
+- 定期更新依赖包
+
+### 3. 可维护性
+- 保持组件单一职责
+- 使用 TypeScript 提供类型安全
+- 编写单元测试
+- 保持代码注释和文档更新

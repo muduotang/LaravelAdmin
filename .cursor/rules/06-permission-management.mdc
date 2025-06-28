@@ -1,5 +1,815 @@
 ---
-description:
-globs:
+description: Laravel + Vue Element Admin Plus 权限管理设计
+globs: ["**/*"]
 alwaysApply: false
 ---
+
+# Laravel + Vue Element Admin Plus 权限管理设计
+
+## 权限管理概述
+
+本系统采用基于角色的访问控制（RBAC）模型，结合前后端分离架构，实现细粒度的权限控制。前端使用 Vue Element Admin Plus 提供的权限控制机制，后端使用 Laravel 的中间件和策略进行权限验证。
+
+## RBAC 权限模型
+
+### 核心概念
+
+```
+用户(Admin) ←→ 角色(Role) ←→ 菜单(Menu)
+     ↓              ↓           ↓
+操作日志      ←→ 资源(Resource) ←→ 资源分类(Category)
+```
+
+### 数据模型关系
+
+#### 1. 用户与角色 (多对多)
+```php
+// Admin Model
+class Admin extends Model
+{
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'admin_roles');
+    }
+}
+
+// Role Model  
+class Role extends Model
+{
+    public function admins()
+    {
+        return $this->belongsToMany(Admin::class, 'admin_roles');
+    }
+}
+```
+
+#### 2. 角色与菜单 (多对多)
+```php
+// Role Model
+class Role extends Model
+{
+    public function menus()
+    {
+        return $this->belongsToMany(Menu::class, 'role_menus');
+    }
+}
+
+// Menu Model
+class Menu extends Model
+{
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'role_menus');
+    }
+}
+```
+
+#### 3. 角色与资源 (多对多)
+```php
+// Role Model
+class Role extends Model
+{
+    public function resources()
+    {
+        return $this->belongsToMany(Resource::class, 'role_resources');
+    }
+}
+
+// Resource Model
+class Resource extends Model
+{
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'role_resources');
+    }
+}
+```
+
+## 后端权限控制
+
+### 1. JWT 认证中间件
+
+```php
+// app/Http/Middleware/JwtAuthMiddleware.php
+class JwtAuthMiddleware
+{
+    public function handle($request, Closure $next)
+    {
+        try {
+            $token = $request->bearerToken();
+            if (!$token) {
+                return response()->json(['message' => 'Token not provided'], 401);
+            }
+            
+            $payload = JWTAuth::parseToken()->getPayload();
+            $admin = Admin::find($payload->get('sub'));
+            
+            if (!$admin) {
+                return response()->json(['message' => 'User not found'], 401);
+            }
+            
+            $request->merge(['current_admin' => $admin]);
+            
+        } catch (Exception $e) {
+            return response()->json(['message' => 'Token invalid'], 401);
+        }
+        
+        return $next($request);
+    }
+}
+```
+
+### 2. 权限验证中间件
+
+```php
+// app/Http/Middleware/PermissionMiddleware.php
+class PermissionMiddleware
+{
+    public function handle($request, Closure $next, $permission)
+    {
+        $admin = $request->get('current_admin');
+        
+        if (!$this->hasPermission($admin, $permission)) {
+            return response()->json(['message' => 'Insufficient permissions'], 403);
+        }
+        
+        return $next($request);
+    }
+    
+    private function hasPermission($admin, $permission)
+    {
+        // 检查用户是否具有指定权限
+        return $admin->roles()
+            ->whereHas('resources', function ($query) use ($permission) {
+                $query->where('code', $permission);
+            })
+            ->exists();
+    }
+}
+```
+
+### 3. 资源权限策略
+
+```php
+// app/Policies/ResourcePolicy.php
+class ResourcePolicy
+{
+    public function viewAny(Admin $admin)
+    {
+        return $this->hasPermission($admin, 'resource:list');
+    }
+    
+    public function create(Admin $admin)
+    {
+        return $this->hasPermission($admin, 'resource:create');
+    }
+    
+    public function update(Admin $admin, Resource $resource)
+    {
+        return $this->hasPermission($admin, 'resource:update');
+    }
+    
+    public function delete(Admin $admin, Resource $resource)
+    {
+        return $this->hasPermission($admin, 'resource:delete');
+    }
+    
+    private function hasPermission(Admin $admin, string $permission)
+    {
+        return $admin->roles()
+            ->whereHas('resources', function ($query) use ($permission) {
+                $query->where('code', $permission);
+            })
+            ->exists();
+    }
+}
+```
+
+### 4. 控制器权限验证
+
+```php
+// app/Http/Controllers/Api/ResourceController.php
+class ResourceController extends BaseController
+{
+    public function __construct()
+    {
+        $this->middleware('jwt.auth');
+        $this->middleware('permission:resource:list')->only(['index']);
+        $this->middleware('permission:resource:create')->only(['store']);
+        $this->middleware('permission:resource:update')->only(['update']);
+        $this->middleware('permission:resource:delete')->only(['destroy']);
+    }
+    
+    public function index(Request $request)
+    {
+        $this->authorize('viewAny', Resource::class);
+        // 业务逻辑
+    }
+}
+```
+
+## 前端权限控制
+
+### 1. 路由权限控制
+
+#### 静态路由配置
+```typescript
+// src/router/routes.ts
+export const constantRoutes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/login/index.vue'),
+    meta: { hidden: true }
+  },
+  {
+    path: '/',
+    component: Layout,
+    redirect: '/dashboard',
+    children: [
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: () => import('@/views/dashboard/index.vue'),
+        meta: { title: '首页', icon: 'dashboard' }
+      }
+    ]
+  }
+]
+```
+
+#### 动态路由配置
+```typescript
+// src/router/routes.ts
+export const asyncRoutes: RouteRecordRaw[] = [
+  {
+    path: '/system',
+    component: Layout,
+    meta: {
+      title: '系统管理',
+      icon: 'system',
+      roles: ['admin', 'manager']
+    },
+    children: [
+      {
+        path: 'user',
+        name: 'SystemUser',
+        component: () => import('@/views/system/user/index.vue'),
+        meta: {
+          title: '用户管理',
+          permissions: ['user:list']
+        }
+      },
+      {
+        path: 'role',
+        name: 'SystemRole',
+        component: () => import('@/views/system/role/index.vue'),
+        meta: {
+          title: '角色管理',
+          permissions: ['role:list']
+        }
+      },
+      {
+        path: 'menu',
+        name: 'SystemMenu',
+        component: () => import('@/views/system/menu/index.vue'),
+        meta: {
+          title: '菜单管理',
+          permissions: ['menu:list']
+        }
+      },
+      {
+        path: 'resource',
+        name: 'SystemResource',
+        component: () => import('@/views/system/resource/index.vue'),
+        meta: {
+          title: '资源管理',
+          permissions: ['resource:list']
+        }
+      }
+    ]
+  }
+]
+```
+
+#### 路由守卫
+```typescript
+// src/router/permission.ts
+import router from './index'
+import { useUserStore } from '@/stores/user'
+import { usePermissionStore } from '@/stores/permission'
+import { ElMessage } from 'element-plus'
+import NProgress from 'nprogress'
+
+const whiteList = ['/login', '/404', '/401']
+
+router.beforeEach(async (to, from, next) => {
+  NProgress.start()
+  
+  const userStore = useUserStore()
+  const permissionStore = usePermissionStore()
+  
+  if (userStore.token) {
+    if (to.path === '/login') {
+      next({ path: '/' })
+      NProgress.done()
+    } else {
+      if (!userStore.userInfo) {
+        try {
+          // 获取用户信息
+          await userStore.getUserInfo()
+          
+          // 生成动态路由
+          const accessRoutes = await permissionStore.generateRoutes(
+            userStore.roles,
+            userStore.permissions
+          )
+          
+          // 添加动态路由
+          accessRoutes.forEach(route => {
+            router.addRoute(route)
+          })
+          
+          // 确保添加路由后再进行跳转
+          next({ ...to, replace: true })
+        } catch (error) {
+          userStore.logout()
+          ElMessage.error('获取用户信息失败，请重新登录')
+          next('/login')
+        }
+      } else {
+        // 检查页面权限
+        if (hasPermission(to, userStore.permissions)) {
+          next()
+        } else {
+          next('/401')
+        }
+      }
+    }
+  } else {
+    if (whiteList.includes(to.path)) {
+      next()
+    } else {
+      next('/login')
+    }
+  }
+  
+  NProgress.done()
+})
+
+// 权限检查函数
+function hasPermission(route: any, permissions: string[]): boolean {
+  if (route.meta && route.meta.permissions) {
+    return route.meta.permissions.some((permission: string) => 
+      permissions.includes(permission)
+    )
+  }
+  return true
+}
+```
+
+### 2. 权限状态管理
+
+```typescript
+// src/stores/permission.ts
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import type { RouteRecordRaw } from 'vue-router'
+import { constantRoutes, asyncRoutes } from '@/router/routes'
+
+export const usePermissionStore = defineStore('permission', () => {
+  const routes = ref<RouteRecordRaw[]>([])
+  const addRoutes = ref<RouteRecordRaw[]>([])
+  const menus = ref<any[]>([])
+  
+  // 生成路由
+  const generateRoutes = async (roles: string[], permissions: string[]) => {
+    let accessedRoutes: RouteRecordRaw[]
+    
+    if (roles.includes('super_admin')) {
+      // 超级管理员拥有所有权限
+      accessedRoutes = asyncRoutes
+    } else {
+      // 根据权限过滤路由
+      accessedRoutes = filterAsyncRoutes(asyncRoutes, permissions)
+    }
+    
+    addRoutes.value = accessedRoutes
+    routes.value = constantRoutes.concat(accessedRoutes)
+    
+    return accessedRoutes
+  }
+  
+  // 生成菜单
+  const generateMenus = (routes: RouteRecordRaw[]) => {
+    const menuList = routes.filter(route => {
+      return !route.meta?.hidden
+    }).map(route => {
+      return {
+        path: route.path,
+        name: route.name,
+        meta: route.meta,
+        children: route.children ? generateMenus(route.children) : []
+      }
+    })
+    
+    menus.value = menuList
+    return menuList
+  }
+  
+  return {
+    routes,
+    addRoutes,
+    menus,
+    generateRoutes,
+    generateMenus
+  }
+})
+
+// 过滤异步路由
+function filterAsyncRoutes(routes: RouteRecordRaw[], permissions: string[]): RouteRecordRaw[] {
+  const res: RouteRecordRaw[] = []
+  
+  routes.forEach(route => {
+    const tmp = { ...route }
+    
+    if (hasPermission(tmp, permissions)) {
+      if (tmp.children) {
+        tmp.children = filterAsyncRoutes(tmp.children, permissions)
+      }
+      res.push(tmp)
+    }
+  })
+  
+  return res
+}
+
+// 检查路由权限
+function hasPermission(route: RouteRecordRaw, permissions: string[]): boolean {
+  if (route.meta && route.meta.permissions) {
+    return (route.meta.permissions as string[]).some(permission => 
+      permissions.includes(permission)
+    )
+  }
+  return true
+}
+```
+
+### 3. 组件级权限控制
+
+#### 权限指令
+```typescript
+// src/directives/permission.ts
+import type { Directive, DirectiveBinding } from 'vue'
+import { useUserStore } from '@/stores/user'
+
+interface PermissionElement extends HTMLElement {
+  _permissionValue?: string[]
+}
+
+export const permission: Directive = {
+  mounted(el: PermissionElement, binding: DirectiveBinding) {
+    const { value } = binding
+    const userStore = useUserStore()
+    
+    if (value && Array.isArray(value) && value.length > 0) {
+      const hasPermission = value.some(permission => {
+        return userStore.permissions.includes(permission)
+      })
+      
+      if (!hasPermission) {
+        el.style.display = 'none'
+        // 或者直接移除元素
+        // el.parentNode?.removeChild(el)
+      }
+      
+      el._permissionValue = value
+    }
+  },
+  
+  updated(el: PermissionElement, binding: DirectiveBinding) {
+    const { value } = binding
+    const userStore = useUserStore()
+    
+    if (JSON.stringify(value) !== JSON.stringify(el._permissionValue)) {
+      if (value && Array.isArray(value) && value.length > 0) {
+        const hasPermission = value.some(permission => {
+          return userStore.permissions.includes(permission)
+        })
+        
+        el.style.display = hasPermission ? '' : 'none'
+        el._permissionValue = value
+      }
+    }
+  }
+}
+```
+
+#### 权限组合式函数
+```typescript
+// src/hooks/usePermission.ts
+import { computed } from 'vue'
+import { useUserStore } from '@/stores/user'
+
+export function usePermission() {
+  const userStore = useUserStore()
+  
+  // 检查单个权限
+  const hasPermission = (permission: string): boolean => {
+    return userStore.permissions.includes(permission)
+  }
+  
+  // 检查多个权限（任一满足）
+  const hasAnyPermission = (permissions: string[]): boolean => {
+    return permissions.some(permission => 
+      userStore.permissions.includes(permission)
+    )
+  }
+  
+  // 检查多个权限（全部满足）
+  const hasAllPermissions = (permissions: string[]): boolean => {
+    return permissions.every(permission => 
+      userStore.permissions.includes(permission)
+    )
+  }
+  
+  // 检查角色
+  const hasRole = (role: string): boolean => {
+    return userStore.roles.includes(role)
+  }
+  
+  // 检查多个角色（任一满足）
+  const hasAnyRole = (roles: string[]): boolean => {
+    return roles.some(role => userStore.roles.includes(role))
+  }
+  
+  // 是否为超级管理员
+  const isSuperAdmin = computed(() => {
+    return userStore.roles.includes('super_admin')
+  })
+  
+  return {
+    hasPermission,
+    hasAnyPermission,
+    hasAllPermissions,
+    hasRole,
+    hasAnyRole,
+    isSuperAdmin
+  }
+}
+```
+
+#### 权限组件
+```vue
+<!-- src/components/Permission/index.vue -->
+<template>
+  <div v-if="hasPermission">
+    <slot />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { usePermission } from '@/hooks/usePermission'
+
+interface Props {
+  permissions?: string[]
+  roles?: string[]
+  mode?: 'any' | 'all' // 权限检查模式
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  permissions: () => [],
+  roles: () => [],
+  mode: 'any'
+})
+
+const {
+  hasPermission: checkPermission,
+  hasAnyPermission,
+  hasAllPermissions,
+  hasRole,
+  hasAnyRole,
+  isSuperAdmin
+} = usePermission()
+
+const hasPermission = computed(() => {
+  // 超级管理员拥有所有权限
+  if (isSuperAdmin.value) {
+    return true
+  }
+  
+  // 检查角色权限
+  if (props.roles.length > 0) {
+    const roleCheck = hasAnyRole(props.roles)
+    if (!roleCheck) {
+      return false
+    }
+  }
+  
+  // 检查具体权限
+  if (props.permissions.length > 0) {
+    if (props.mode === 'all') {
+      return hasAllPermissions(props.permissions)
+    } else {
+      return hasAnyPermission(props.permissions)
+    }
+  }
+  
+  return true
+})
+</script>
+```
+
+### 4. 页面组件权限使用示例
+
+```vue
+<!-- src/views/system/user/index.vue -->
+<template>
+  <div class="user-management">
+    <div class="toolbar">
+      <!-- 使用指令控制权限 -->
+      <el-button 
+        v-permission="['user:create']"
+        type="primary" 
+        @click="handleCreate"
+      >
+        新增用户
+      </el-button>
+      
+      <!-- 使用组合式函数控制权限 -->
+      <el-button 
+        v-if="hasPermission('user:export')"
+        @click="handleExport"
+      >
+        导出数据
+      </el-button>
+      
+      <!-- 使用权限组件控制权限 -->
+      <Permission :permissions="['user:batch_delete']">
+        <el-button 
+          type="danger" 
+          @click="handleBatchDelete"
+        >
+          批量删除
+        </el-button>
+      </Permission>
+    </div>
+    
+    <el-table :data="tableData">
+      <el-table-column prop="name" label="用户名" />
+      <el-table-column prop="email" label="邮箱" />
+      <el-table-column label="操作">
+        <template #default="{ row }">
+          <el-button 
+            v-permission="['user:edit']"
+            size="small" 
+            @click="handleEdit(row)"
+          >
+            编辑
+          </el-button>
+          <el-button 
+            v-permission="['user:delete']"
+            size="small" 
+            type="danger" 
+            @click="handleDelete(row)"
+          >
+            删除
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { usePermission } from '@/hooks/usePermission'
+import Permission from '@/components/Permission/index.vue'
+
+const { hasPermission } = usePermission()
+const tableData = ref([])
+
+const handleCreate = () => {
+  // 新增用户逻辑
+}
+
+const handleEdit = (row: any) => {
+  // 编辑用户逻辑
+}
+
+const handleDelete = (row: any) => {
+  // 删除用户逻辑
+}
+
+const handleExport = () => {
+  // 导出数据逻辑
+}
+
+const handleBatchDelete = () => {
+  // 批量删除逻辑
+}
+</script>
+```
+
+## 权限数据结构
+
+### 1. 菜单权限数据
+```json
+{
+  "id": 1,
+  "name": "系统管理",
+  "path": "/system",
+  "component": "Layout",
+  "icon": "system",
+  "sort": 1,
+  "status": 1,
+  "children": [
+    {
+      "id": 2,
+      "name": "用户管理",
+      "path": "/system/user",
+      "component": "system/user/index",
+      "icon": "user",
+      "sort": 1,
+      "status": 1,
+      "permissions": ["user:list"]
+    }
+  ]
+}
+```
+
+### 2. 资源权限数据
+```json
+{
+  "id": 1,
+  "name": "用户列表",
+  "code": "user:list",
+  "method": "GET",
+  "url": "/api/users",
+  "category_id": 1,
+  "description": "获取用户列表",
+  "status": 1
+}
+```
+
+### 3. 用户权限响应数据
+```json
+{
+  "user": {
+    "id": 1,
+    "username": "admin",
+    "email": "admin@example.com",
+    "roles": ["admin", "manager"],
+    "permissions": [
+      "user:list",
+      "user:create",
+      "user:edit",
+      "user:delete",
+      "role:list",
+      "role:create"
+    ]
+  },
+  "menus": [
+    {
+      "id": 1,
+      "name": "系统管理",
+      "path": "/system",
+      "icon": "system",
+      "children": [
+        {
+          "id": 2,
+          "name": "用户管理",
+          "path": "/system/user",
+          "icon": "user"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 权限管理最佳实践
+
+### 1. 权限粒度设计
+- **页面级权限**：控制用户能访问哪些页面
+- **功能级权限**：控制用户能使用哪些功能（增删改查）
+- **数据级权限**：控制用户能看到哪些数据（部门、个人）
+- **字段级权限**：控制用户能看到哪些字段（敏感信息）
+
+### 2. 权限缓存策略
+- 用户权限信息缓存到 Redis，减少数据库查询
+- 前端权限信息存储到 localStorage，避免重复请求
+- 权限变更时及时清理相关缓存
+
+### 3. 安全考虑
+- 前端权限控制仅用于用户体验，不能作为安全边界
+- 所有敏感操作必须在后端进行权限验证
+- 使用 HTTPS 传输敏感数据
+- 定期审计用户权限，及时回收不必要的权限
+
+### 4. 性能优化
+- 权限检查逻辑尽量简单，避免复杂计算
+- 合理使用权限缓存，减少重复查询
+- 动态路由按需加载，减少初始化时间
+- 权限变更时使用增量更新而非全量刷新

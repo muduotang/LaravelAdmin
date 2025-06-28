@@ -1,0 +1,1101 @@
+---
+description: Vue Element Admin Plus 开发指南
+globs: ["frontend/**/*", "**/*.vue", "**/*.ts", "**/*.js"]
+alwaysApply: false
+---
+
+# Vue Element Admin Plus 开发指南
+
+## 项目概述
+
+本项目前端基于 Vue Element Admin Plus 开发，这是一个基于 Vue 3 + Element Plus + TypeScript 的现代化后台管理系统模板。
+
+- **GitHub**: https://github.com/kailong321200875/vue-element-plus-admin
+- **Demo**: https://element-plus-admin.cn/
+- **文档**: https://element-plus-admin.cn/guide/
+
+## 技术栈
+
+### 核心技术
+- **Vue 3** - 渐进式 JavaScript 框架
+- **TypeScript** - 类型安全的 JavaScript 超集
+- **Element Plus** - 基于 Vue 3 的企业级 UI 组件库
+- **Vite** - 现代化的前端构建工具
+- **Pinia** - Vue 3 官方推荐的状态管理库
+- **Vue Router 4** - Vue 3 的官方路由管理器
+- **Axios** - HTTP 客户端库
+
+### 开发工具
+- **ESLint** - 代码质量检查
+- **Prettier** - 代码格式化
+- **Husky** - Git hooks 管理
+- **Commitizen** - 规范化提交信息
+- **Sass** - CSS 预处理器
+
+## 项目结构
+
+```
+frontend/
+├── public/                     # 静态资源
+│   ├── favicon.ico
+│   └── index.html
+├── src/
+│   ├── api/                    # API 接口
+│   │   ├── auth.ts             # 认证相关接口
+│   │   ├── user.ts             # 用户管理接口
+│   │   ├── role.ts             # 角色管理接口
+│   │   ├── menu.ts             # 菜单管理接口
+│   │   └── resource.ts         # 资源管理接口
+│   ├── assets/                 # 静态资源
+│   │   ├── icons/              # 图标文件
+│   │   ├── images/             # 图片文件
+│   │   └── styles/             # 全局样式
+│   ├── components/             # 公共组件
+│   │   ├── Permission/         # 权限控制组件
+│   │   ├── Table/              # 表格组件
+│   │   ├── Form/               # 表单组件
+│   │   └── Layout/             # 布局组件
+│   ├── composables/            # 组合式函数
+│   │   ├── usePermission.ts    # 权限相关
+│   │   ├── useTable.ts         # 表格相关
+│   │   └── useForm.ts          # 表单相关
+│   ├── directives/             # 自定义指令
+│   │   ├── permission.ts       # 权限指令
+│   │   └── loading.ts          # 加载指令
+│   ├── hooks/                  # Vue 3 Hooks
+│   │   ├── useAuth.ts          # 认证相关
+│   │   ├── useRequest.ts       # 请求相关
+│   │   └── useTheme.ts         # 主题相关
+│   ├── layout/                 # 布局组件
+│   │   ├── components/         # 布局子组件
+│   │   ├── index.vue           # 主布局
+│   │   └── types.ts            # 布局类型定义
+│   ├── locales/                # 国际化
+│   │   ├── zh-cn.ts            # 中文
+│   │   ├── en.ts               # 英文
+│   │   └── index.ts            # 国际化配置
+│   ├── router/                 # 路由配置
+│   │   ├── index.ts            # 路由主文件
+│   │   ├── routes.ts           # 路由定义
+│   │   ├── permission.ts       # 路由权限
+│   │   └── types.ts            # 路由类型
+│   ├── stores/                 # Pinia 状态管理
+│   │   ├── index.ts            # Store 主文件
+│   │   ├── user.ts             # 用户状态
+│   │   ├── permission.ts       # 权限状态
+│   │   ├── app.ts              # 应用状态
+│   │   ├── settings.ts         # 设置状态
+│   │   └── tagsView.ts         # 标签页状态
+│   ├── styles/                 # 样式文件
+│   │   ├── index.scss          # 主样式文件
+│   │   ├── variables.scss      # 变量定义
+│   │   ├── mixins.scss         # 混入样式
+│   │   ├── element-plus.scss   # Element Plus 样式覆盖
+│   │   ├── transition.scss     # 过渡动画
+│   │   ├── sidebar.scss        # 侧边栏样式
+│   │   └── dark.scss           # 暗色主题
+│   ├── types/                  # TypeScript 类型定义
+│   │   ├── api.ts              # API 类型
+│   │   ├── global.ts           # 全局类型
+│   │   ├── user.ts             # 用户类型
+│   │   └── permission.ts       # 权限类型
+│   ├── utils/                  # 工具函数
+│   │   ├── auth.ts             # 认证工具
+│   │   ├── request.ts          # HTTP 请求封装
+│   │   ├── validate.ts         # 验证工具
+│   │   ├── permission.ts       # 权限工具
+│   │   ├── storage.ts          # 存储工具
+│   │   └── common.ts           # 通用工具
+│   ├── views/                  # 页面组件
+│   │   ├── dashboard/          # 仪表盘
+│   │   ├── login/              # 登录页
+│   │   ├── system/             # 系统管理
+│   │   │   ├── user/           # 用户管理
+│   │   │   ├── role/           # 角色管理
+│   │   │   ├── menu/           # 菜单管理
+│   │   │   └── resource/       # 资源管理
+│   │   └── error/              # 错误页面
+│   ├── App.vue                 # 根组件
+│   ├── main.ts                 # 入口文件
+│   └── vite-env.d.ts           # Vite 类型声明
+├── .env                        # 环境变量
+├── .env.development            # 开发环境变量
+├── .env.production             # 生产环境变量
+├── .eslintrc.js                # ESLint 配置
+├── .prettierrc.js              # Prettier 配置
+├── tsconfig.json               # TypeScript 配置
+├── vite.config.ts              # Vite 配置
+└── package.json                # 项目依赖
+```
+
+## 开发规范
+
+### 1. 命名规范
+
+#### 文件命名
+- **组件文件**: 使用 PascalCase，如 `UserList.vue`
+- **页面文件**: 使用 kebab-case，如 `user-list.vue`
+- **工具文件**: 使用 camelCase，如 `authUtils.ts`
+- **类型文件**: 使用 camelCase，如 `userTypes.ts`
+
+#### 变量命名
+- **变量和函数**: 使用 camelCase，如 `userName`, `getUserInfo`
+- **常量**: 使用 UPPER_SNAKE_CASE，如 `API_BASE_URL`
+- **类型和接口**: 使用 PascalCase，如 `UserInfo`, `ApiResponse`
+
+#### 组件命名
+- **组件名**: 使用 PascalCase，如 `UserList`, `DataTable`
+- **组件实例**: 使用 camelCase，如 `userList`, `dataTable`
+
+### 2. 代码组织
+
+#### Vue 组件结构
+```vue
+<template>
+  <!-- 模板内容 -->
+</template>
+
+<script setup lang="ts">
+// 1. 导入依赖
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+
+// 2. 类型定义
+interface UserInfo {
+  id: number
+  name: string
+  email: string
+}
+
+// 3. Props 定义
+interface Props {
+  userId?: number
+  readonly?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  readonly: false
+})
+
+// 4. Emits 定义
+interface Emits {
+  (e: 'update', user: UserInfo): void
+  (e: 'delete', id: number): void
+}
+
+const emit = defineEmits<Emits>()
+
+// 5. 响应式数据
+const loading = ref(false)
+const userInfo = reactive<UserInfo>({
+  id: 0,
+  name: '',
+  email: ''
+})
+
+// 6. 计算属性
+const isValid = computed(() => {
+  return userInfo.name && userInfo.email
+})
+
+// 7. 方法定义
+const handleSubmit = async () => {
+  if (!isValid.value) {
+    ElMessage.error('请填写完整信息')
+    return
+  }
+  
+  try {
+    loading.value = true
+    // 处理逻辑
+    emit('update', userInfo)
+  } catch (error) {
+    ElMessage.error('操作失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 8. 生命周期
+onMounted(() => {
+  // 初始化逻辑
+})
+</script>
+
+<style lang="scss" scoped>
+// 组件样式
+</style>
+```
+
+#### TypeScript 类型定义
+```typescript
+// types/user.ts
+export interface UserInfo {
+  id: number
+  username: string
+  email: string
+  roles: string[]
+  permissions: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface UserListParams {
+  page: number
+  pageSize: number
+  keyword?: string
+  status?: number
+}
+
+export interface UserListResponse {
+  data: UserInfo[]
+  total: number
+  page: number
+  pageSize: number
+}
+```
+
+### 3. API 接口规范
+
+#### 接口定义
+```typescript
+// api/user.ts
+import request from '@/utils/request'
+import type { UserInfo, UserListParams, UserListResponse } from '@/types/user'
+
+// 获取用户列表
+export const getUserList = (params: UserListParams): Promise<UserListResponse> => {
+  return request({
+    url: '/api/users',
+    method: 'get',
+    params
+  })
+}
+
+// 获取用户详情
+export const getUserInfo = (id: number): Promise<UserInfo> => {
+  return request({
+    url: `/api/users/${id}`,
+    method: 'get'
+  })
+}
+
+// 创建用户
+export const createUser = (data: Partial<UserInfo>): Promise<UserInfo> => {
+  return request({
+    url: '/api/users',
+    method: 'post',
+    data
+  })
+}
+
+// 更新用户
+export const updateUser = (id: number, data: Partial<UserInfo>): Promise<UserInfo> => {
+  return request({
+    url: `/api/users/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+// 删除用户
+export const deleteUser = (id: number): Promise<void> => {
+  return request({
+    url: `/api/users/${id}`,
+    method: 'delete'
+  })
+}
+```
+
+#### 请求封装
+```typescript
+// utils/request.ts
+import axios from 'axios'
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+import router from '@/router'
+
+// 创建 axios 实例
+const service: AxiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL,
+  timeout: 10000
+})
+
+// 请求拦截器
+service.interceptors.request.use(
+  (config: AxiosRequestConfig) => {
+    const userStore = useUserStore()
+    if (userStore.token) {
+      config.headers = {
+        ...config.headers,
+        Authorization: `Bearer ${userStore.token}`
+      }
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// 响应拦截器
+service.interceptors.response.use(
+  (response: AxiosResponse) => {
+    const { code, message, data } = response.data
+    
+    if (code === 200) {
+      return data
+    } else {
+      ElMessage.error(message || '请求失败')
+      return Promise.reject(new Error(message || '请求失败'))
+    }
+  },
+  (error) => {
+    const { response } = error
+    
+    if (response?.status === 401) {
+      ElMessageBox.confirm('登录状态已过期，请重新登录', '系统提示', {
+        confirmButtonText: '重新登录',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        const userStore = useUserStore()
+        userStore.logout()
+        router.push('/login')
+      })
+    } else {
+      ElMessage.error(response?.data?.message || '网络错误')
+    }
+    
+    return Promise.reject(error)
+  }
+)
+
+export default service
+```
+
+### 4. 状态管理规范
+
+#### Pinia Store 定义
+```typescript
+// stores/user.ts
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import type { UserInfo } from '@/types/user'
+import { getUserInfo, login, logout } from '@/api/auth'
+import { getToken, setToken, removeToken } from '@/utils/auth'
+
+export const useUserStore = defineStore('user', () => {
+  // 状态
+  const token = ref(getToken())
+  const userInfo = ref<UserInfo | null>(null)
+  const roles = ref<string[]>([])
+  const permissions = ref<string[]>([])
+  
+  // 计算属性
+  const isLoggedIn = computed(() => !!token.value)
+  const hasRole = computed(() => (role: string) => roles.value.includes(role))
+  const hasPermission = computed(() => (permission: string) => permissions.value.includes(permission))
+  
+  // 方法
+  const setUserInfo = (info: UserInfo) => {
+    userInfo.value = info
+    roles.value = info.roles
+    permissions.value = info.permissions
+  }
+  
+  const login = async (loginForm: LoginForm) => {
+    try {
+      const { token: newToken } = await login(loginForm)
+      token.value = newToken
+      setToken(newToken)
+      
+      // 获取用户信息
+      await getUserInfo()
+      
+      return Promise.resolve()
+    } catch (error) {
+      return Promise.reject(error)
+    }
+  }
+  
+  const getUserInfo = async () => {
+    try {
+      const info = await getUserInfo()
+      setUserInfo(info)
+      return Promise.resolve(info)
+    } catch (error) {
+      return Promise.reject(error)
+    }
+  }
+  
+  const logout = async () => {
+    try {
+      await logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      token.value = ''
+      userInfo.value = null
+      roles.value = []
+      permissions.value = []
+      removeToken()
+    }
+  }
+  
+  return {
+    // 状态
+    token,
+    userInfo,
+    roles,
+    permissions,
+    
+    // 计算属性
+    isLoggedIn,
+    hasRole,
+    hasPermission,
+    
+    // 方法
+    setUserInfo,
+    login,
+    getUserInfo,
+    logout
+  }
+})
+```
+
+### 5. 路由配置规范
+
+#### 路由定义
+```typescript
+// router/routes.ts
+import type { RouteRecordRaw } from 'vue-router'
+import Layout from '@/layout/index.vue'
+
+// 静态路由
+export const constantRoutes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/login/index.vue'),
+    meta: {
+      title: '登录',
+      hidden: true
+    }
+  },
+  {
+    path: '/',
+    component: Layout,
+    redirect: '/dashboard',
+    children: [
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: () => import('@/views/dashboard/index.vue'),
+        meta: {
+          title: '首页',
+          icon: 'dashboard',
+          affix: true
+        }
+      }
+    ]
+  }
+]
+
+// 动态路由
+export const asyncRoutes: RouteRecordRaw[] = [
+  {
+    path: '/system',
+    component: Layout,
+    meta: {
+      title: '系统管理',
+      icon: 'system',
+      roles: ['admin']
+    },
+    children: [
+      {
+        path: 'user',
+        name: 'SystemUser',
+        component: () => import('@/views/system/user/index.vue'),
+        meta: {
+          title: '用户管理',
+          permissions: ['user:list']
+        }
+      },
+      {
+        path: 'role',
+        name: 'SystemRole',
+        component: () => import('@/views/system/role/index.vue'),
+        meta: {
+          title: '角色管理',
+          permissions: ['role:list']
+        }
+      }
+    ]
+  }
+]
+```
+
+#### 路由权限控制
+```typescript
+// router/permission.ts
+import router from './index'
+import { useUserStore } from '@/stores/user'
+import { usePermissionStore } from '@/stores/permission'
+import { ElMessage } from 'element-plus'
+import NProgress from 'nprogress'
+import 'nprogress/nprogress.css'
+
+NProgress.configure({ showSpinner: false })
+
+const whiteList = ['/login', '/404', '/401']
+
+router.beforeEach(async (to, from, next) => {
+  NProgress.start()
+  
+  const userStore = useUserStore()
+  const permissionStore = usePermissionStore()
+  
+  if (userStore.token) {
+    if (to.path === '/login') {
+      next({ path: '/' })
+      NProgress.done()
+    } else {
+      if (!userStore.userInfo) {
+        try {
+          await userStore.getUserInfo()
+          
+          const accessRoutes = await permissionStore.generateRoutes(
+            userStore.roles,
+            userStore.permissions
+          )
+          
+          accessRoutes.forEach(route => {
+            router.addRoute(route)
+          })
+          
+          next({ ...to, replace: true })
+        } catch (error) {
+          userStore.logout()
+          ElMessage.error('获取用户信息失败，请重新登录')
+          next('/login')
+        }
+      } else {
+        if (hasPermission(to, userStore.permissions)) {
+          next()
+        } else {
+          next('/401')
+        }
+      }
+    }
+  } else {
+    if (whiteList.includes(to.path)) {
+      next()
+    } else {
+      next('/login')
+    }
+  }
+  
+  NProgress.done()
+})
+
+router.afterEach(() => {
+  NProgress.done()
+})
+
+function hasPermission(route: any, permissions: string[]): boolean {
+  if (route.meta && route.meta.permissions) {
+    return route.meta.permissions.some((permission: string) => 
+      permissions.includes(permission)
+    )
+  }
+  return true
+}
+```
+
+### 6. 组件开发规范
+
+#### 公共组件
+```vue
+<!-- components/Table/DataTable.vue -->
+<template>
+  <div class="data-table">
+    <el-table
+      v-loading="loading"
+      :data="data"
+      :height="height"
+      :max-height="maxHeight"
+      @selection-change="handleSelectionChange"
+      @sort-change="handleSortChange"
+    >
+      <el-table-column
+        v-if="showSelection"
+        type="selection"
+        width="55"
+        align="center"
+      />
+      
+      <el-table-column
+        v-for="column in columns"
+        :key="column.prop"
+        :prop="column.prop"
+        :label="column.label"
+        :width="column.width"
+        :min-width="column.minWidth"
+        :sortable="column.sortable"
+        :align="column.align || 'left'"
+      >
+        <template #default="{ row, column: col, $index }">
+          <slot
+            :name="column.prop"
+            :row="row"
+            :column="col"
+            :index="$index"
+          >
+            {{ row[column.prop] }}
+          </slot>
+        </template>
+      </el-table-column>
+      
+      <el-table-column
+        v-if="showActions"
+        label="操作"
+        :width="actionWidth"
+        align="center"
+        fixed="right"
+      >
+        <template #default="{ row, $index }">
+          <slot name="actions" :row="row" :index="$index" />
+        </template>
+      </el-table-column>
+    </el-table>
+    
+    <el-pagination
+      v-if="showPagination"
+      v-model:current-page="currentPage"
+      v-model:page-size="pageSize"
+      :total="total"
+      :page-sizes="pageSizes"
+      layout="total, sizes, prev, pager, next, jumper"
+      @size-change="handleSizeChange"
+      @current-change="handleCurrentChange"
+    />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+
+interface Column {
+  prop: string
+  label: string
+  width?: number
+  minWidth?: number
+  sortable?: boolean
+  align?: 'left' | 'center' | 'right'
+}
+
+interface Props {
+  data: any[]
+  columns: Column[]
+  loading?: boolean
+  height?: number
+  maxHeight?: number
+  showSelection?: boolean
+  showActions?: boolean
+  actionWidth?: number
+  showPagination?: boolean
+  total?: number
+  pageSize?: number
+  pageSizes?: number[]
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  loading: false,
+  showSelection: false,
+  showActions: true,
+  actionWidth: 200,
+  showPagination: true,
+  total: 0,
+  pageSize: 20,
+  pageSizes: () => [10, 20, 50, 100]
+})
+
+interface Emits {
+  (e: 'selection-change', selection: any[]): void
+  (e: 'sort-change', sort: any): void
+  (e: 'size-change', size: number): void
+  (e: 'current-change', page: number): void
+}
+
+const emit = defineEmits<Emits>()
+
+const currentPage = ref(1)
+
+const handleSelectionChange = (selection: any[]) => {
+  emit('selection-change', selection)
+}
+
+const handleSortChange = (sort: any) => {
+  emit('sort-change', sort)
+}
+
+const handleSizeChange = (size: number) => {
+  emit('size-change', size)
+}
+
+const handleCurrentChange = (page: number) => {
+  emit('current-change', page)
+}
+</script>
+
+<style lang="scss" scoped>
+.data-table {
+  .el-pagination {
+    margin-top: 20px;
+    text-align: right;
+  }
+}
+</style>
+```
+
+### 7. 样式规范
+
+#### SCSS 变量定义
+```scss
+// styles/variables.scss
+
+// 颜色变量
+$primary-color: #409eff;
+$success-color: #67c23a;
+$warning-color: #e6a23c;
+$danger-color: #f56c6c;
+$info-color: #909399;
+
+// 文字颜色
+$text-color-primary: #303133;
+$text-color-regular: #606266;
+$text-color-secondary: #909399;
+$text-color-placeholder: #c0c4cc;
+
+// 边框颜色
+$border-color-base: #dcdfe6;
+$border-color-light: #e4e7ed;
+$border-color-lighter: #ebeef5;
+$border-color-extra-light: #f2f6fc;
+
+// 背景颜色
+$background-color-base: #f5f7fa;
+$background-color-light: #fafafa;
+
+// 尺寸变量
+$border-radius-base: 4px;
+$border-radius-small: 2px;
+$box-shadow-base: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
+$box-shadow-dark: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.12);
+
+// 布局变量
+$sidebar-width: 210px;
+$navbar-height: 50px;
+$tagsview-height: 34px;
+```
+
+#### 组件样式
+```scss
+// styles/element-plus.scss
+
+// 覆盖 Element Plus 默认样式
+.el-button {
+  &.is-disabled {
+    cursor: not-allowed;
+  }
+}
+
+.el-table {
+  .el-table__header {
+    th {
+      background-color: #fafafa;
+      color: $text-color-primary;
+      font-weight: 500;
+    }
+  }
+  
+  .el-table__row {
+    &:hover {
+      background-color: #f5f7fa;
+    }
+  }
+}
+
+.el-pagination {
+  .el-pager {
+    .number {
+      &.active {
+        background-color: $primary-color;
+        color: #fff;
+      }
+    }
+  }
+}
+```
+
+### 8. 国际化规范
+
+#### 语言文件
+```typescript
+// locales/zh-cn.ts
+export default {
+  common: {
+    confirm: '确认',
+    cancel: '取消',
+    save: '保存',
+    delete: '删除',
+    edit: '编辑',
+    add: '新增',
+    search: '搜索',
+    reset: '重置',
+    submit: '提交',
+    back: '返回',
+    loading: '加载中...',
+    noData: '暂无数据',
+    operation: '操作',
+    status: '状态',
+    createTime: '创建时间',
+    updateTime: '更新时间'
+  },
+  
+  menu: {
+    dashboard: '首页',
+    system: '系统管理',
+    user: '用户管理',
+    role: '角色管理',
+    menu: '菜单管理',
+    resource: '资源管理'
+  },
+  
+  user: {
+    username: '用户名',
+    email: '邮箱',
+    phone: '手机号',
+    roles: '角色',
+    status: '状态',
+    lastLoginTime: '最后登录时间',
+    createUser: '新增用户',
+    editUser: '编辑用户',
+    deleteUser: '删除用户',
+    resetPassword: '重置密码'
+  },
+  
+  validation: {
+    required: '此项为必填项',
+    email: '请输入正确的邮箱格式',
+    phone: '请输入正确的手机号格式',
+    minLength: '长度不能少于{min}位',
+    maxLength: '长度不能超过{max}位'
+  },
+  
+  message: {
+    success: {
+      save: '保存成功',
+      delete: '删除成功',
+      update: '更新成功',
+      create: '创建成功'
+    },
+    error: {
+      save: '保存失败',
+      delete: '删除失败',
+      update: '更新失败',
+      create: '创建失败',
+      network: '网络错误，请稍后重试'
+    }
+  }
+}
+```
+
+#### 国际化配置
+```typescript
+// locales/index.ts
+import { createI18n } from 'vue-i18n'
+import zhCn from './zh-cn'
+import en from './en'
+
+const messages = {
+  'zh-cn': zhCn,
+  'en': en
+}
+
+const i18n = createI18n({
+  legacy: false,
+  locale: 'zh-cn',
+  fallbackLocale: 'en',
+  messages
+})
+
+export default i18n
+```
+
+### 9. 测试规范
+
+#### 单元测试
+```typescript
+// tests/unit/components/DataTable.spec.ts
+import { mount } from '@vue/test-utils'
+import { describe, it, expect } from 'vitest'
+import DataTable from '@/components/Table/DataTable.vue'
+
+describe('DataTable', () => {
+  const columns = [
+    { prop: 'name', label: '姓名' },
+    { prop: 'email', label: '邮箱' }
+  ]
+  
+  const data = [
+    { name: '张三', email: 'zhangsan@example.com' },
+    { name: '李四', email: 'lisi@example.com' }
+  ]
+  
+  it('renders correctly', () => {
+    const wrapper = mount(DataTable, {
+      props: {
+        columns,
+        data
+      }
+    })
+    
+    expect(wrapper.find('.data-table').exists()).toBe(true)
+    expect(wrapper.findAll('.el-table__row')).toHaveLength(2)
+  })
+  
+  it('emits selection-change event', async () => {
+    const wrapper = mount(DataTable, {
+      props: {
+        columns,
+        data,
+        showSelection: true
+      }
+    })
+    
+    await wrapper.find('.el-checkbox').trigger('click')
+    expect(wrapper.emitted('selection-change')).toBeTruthy()
+  })
+})
+```
+
+### 10. 构建和部署
+
+#### Vite 配置
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import { resolve } from 'path'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import Components from 'unplugin-vue-components/vite'
+import AutoImport from 'unplugin-auto-import/vite'
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    AutoImport({
+      resolvers: [ElementPlusResolver()],
+      imports: ['vue', 'vue-router', 'pinia'],
+      dts: true
+    }),
+    Components({
+      resolvers: [ElementPlusResolver()],
+      dts: true
+    })
+  ],
+  
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src')
+    }
+  },
+  
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `@import "@/styles/variables.scss";`
+      }
+    }
+  },
+  
+  build: {
+    target: 'es2015',
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        chunkFileNames: 'js/[name]-[hash].js',
+        entryFileNames: 'js/[name]-[hash].js',
+        assetFileNames: '[ext]/[name]-[hash].[ext]'
+      }
+    }
+  },
+  
+  server: {
+    port: 3000,
+    open: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
+  }
+})
+```
+
+#### 环境变量配置
+```bash
+# .env.development
+VITE_APP_TITLE=Laravel Admin - 开发环境
+VITE_API_BASE_URL=http://localhost:8000/api
+VITE_APP_ENV=development
+
+# .env.production
+VITE_APP_TITLE=Laravel Admin
+VITE_API_BASE_URL=https://api.example.com
+VITE_APP_ENV=production
+```
+
+## 最佳实践
+
+### 1. 性能优化
+- 使用 `v-memo` 优化列表渲染
+- 合理使用 `shallowRef` 和 `shallowReactive`
+- 组件懒加载和代码分割
+- 图片懒加载和压缩
+- 合理使用缓存策略
+
+### 2. 安全考虑
+- 前端权限控制仅用于用户体验
+- 敏感数据不在前端存储
+- XSS 和 CSRF 防护
+- 输入验证和过滤
+
+### 3. 用户体验
+- 加载状态提示
+- 错误处理和友好提示
+- 响应式设计
+- 无障碍访问支持
+- 国际化支持
+
+### 4. 代码质量
+- TypeScript 类型检查
+- ESLint 代码规范
+- 单元测试覆盖
+- 代码审查流程
+- 文档完善
+
+### 5. 开发效率
+- 组件库和工具函数复用
+- 开发工具配置
+- 热更新和调试
+- 自动化构建和部署
+- 团队协作规范

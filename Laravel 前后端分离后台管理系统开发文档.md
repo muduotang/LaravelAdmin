@@ -8,8 +8,20 @@
 ### 1.2 技术栈选择
 - **后端框架**：Laravel 10（PHP 8.1+）
   - 选择理由：成熟稳定的 PHP 框架，丰富的生态系统，优秀的 ORM 和中间件支持
-- **前端框架**：Vue 2 + Element UI + vue-element-admin
-  - 选择理由：渐进式框架，组件化开发，丰富的 UI 组件库
+- **前端框架**：Vue 3 + Element Plus + Vue Element Admin Plus
+  - 选择理由：现代化渐进式框架，完整的 TypeScript 支持，丰富的组件库和内置权限管理
+  - GitHub: https://github.com/kailong321200875/vue-element-plus-admin
+  - Demo: https://element-plus-admin.cn/
+  - 主要特性：
+    - 完全基于 Vue 3 + Element Plus
+    - TypeScript 支持
+    - 内置权限管理
+    - 丰富的组件和示例
+    - 完善的文档
+    - 多语言支持
+    - 主题定制
+    - 动态路由
+    - 多标签页
 - **数据库**：MySQL 8.0+
   - 选择理由：稳定可靠，性能优秀，社区支持完善
 - **缓存**：Redis 6.0+
@@ -33,11 +45,13 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                        前端层 (Frontend)                      │
 ├─────────────────────────────────────────────────────────────┤
-│  Vue.js + Element UI + vue-element-admin                    │
-│  ├── 用户界面 (UI Layer)                                    │
-│  ├── 状态管理 (Vuex)                                        │
-│  ├── 路由管理 (Vue Router)                                  │
-│  └── 权限控制 (Permission)                                  │
+│  Vue 3 + Element Plus + Vue Element Admin Plus             │
+│  ├── 用户界面 (UI Layer) - TypeScript                      │
+│  ├── 状态管理 (Pinia)                                       │
+│  ├── 路由管理 (Vue Router 4)                               │
+│  ├── 权限控制 (Permission)                                  │
+│  ├── 构建工具 (Vite)                                        │
+│  └── 多语言支持 (Vue I18n)                                  │
 └─────────────────────────────────────────────────────────────┘
                               │
                               │ HTTP/HTTPS
@@ -132,11 +146,12 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                    状态管理层 (State Management)              │
 ├─────────────────────────────────────────────────────────────┤
-│  Vuex Store (状态管理)                                       │
-│  ├── 用户状态 (User State)                                   │
-│  ├── 权限状态 (Permission State)                            │
-│  ├── 应用状态 (App State)                                    │
-│  └── 缓存状态 (Cache State)                                  │
+│  Pinia Store (状态管理)                                      │
+│  ├── 用户状态 (User Store)                                   │
+│  ├── 权限状态 (Permission Store)                            │
+│  ├── 应用状态 (App Store)                                    │
+│  ├── 设置状态 (Settings Store)                              │
+│  └── 缓存状态 (Cache Store)                                  │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -355,19 +370,20 @@ frontend/
 │   │       ├── role.js          # 角色管理路由
 │   │       ├── menu.js          # 菜单管理路由
 │   │       └── system.js        # 系统管理路由
-│   ├── store/                   # Vuex 状态管理
-│   │   ├── index.js             # Store 主文件
-│   │   └── modules/             # Store 模块
-│   │       ├── app.js           # 应用状态
-│   │       ├── user.js          # 用户状态
-│   │       ├── permission.js    # 权限状态
-│   │       └── tagsView.js      # 标签页状态
+│   ├── stores/                  # Pinia 状态管理
+│   │   ├── index.ts             # Store 主文件
+│   │   ├── user.ts              # 用户状态
+│   │   ├── permission.ts        # 权限状态
+│   │   ├── app.ts               # 应用状态
+│   │   ├── settings.ts          # 设置状态
+│   │   └── tagsView.ts          # 标签页状态
 │   ├── styles/                  # 样式文件
 │   │   ├── index.scss           # 主样式文件
 │   │   ├── variables.scss       # 变量定义
 │   │   ├── transition.scss      # 过渡动画
-│   │   ├── element-ui.scss      # Element UI 样式覆盖
-│   │   └── sidebar.scss         # 侧边栏样式
+│   │   ├── element-plus.scss    # Element Plus 样式覆盖
+│   │   ├── sidebar.scss         # 侧边栏样式
+│   │   └── dark.scss            # 暗色主题样式
 │   ├── utils/                   # 工具函数
 │   │   ├── auth.js              # 认证相关工具
 │   │   ├── request.js           # HTTP 请求封装

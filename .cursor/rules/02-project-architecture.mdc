@@ -1,5 +1,381 @@
 ---
-description:
-globs:
+description: Laravel + Vue Element Admin Plus 项目架构设计
+globs: ["**/*"]
 alwaysApply: false
 ---
+
+# Laravel + Vue Element Admin Plus 项目架构设计
+
+## 整体架构概览
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        前端层 (Frontend)                      │
+├─────────────────────────────────────────────────────────────┤
+│  Vue 3 + Element Plus + TypeScript + Vite                  │
+│  ├── 用户界面 (UI Layer)                                    │
+│  ├── 状态管理 (Pinia)                                       │
+│  ├── 路由管理 (Vue Router 4)                                │
+│  ├── 权限控制 (Permission)                                  │
+│  ├── 国际化 (Vue I18n)                                      │
+│  └── 主题定制 (SCSS Variables)                              │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              │ HTTP/HTTPS (RESTful API)
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        网关层 (Gateway)                       │
+├─────────────────────────────────────────────────────────────┤
+│  Nginx + SSL + CORS + Rate Limiting                        │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        后端层 (Backend)                       │
+├─────────────────────────────────────────────────────────────┤
+│  Laravel 10 + PHP 8.1+                                     │
+│  ├── 控制器层 (Controllers)                                 │
+│  ├── 服务层 (Services)                                      │
+│  ├── 模型层 (Models)                                        │
+│  ├── 中间件 (Middleware)                                    │
+│  ├── 认证授权 (JWT + RBAC)                                  │
+│  └── API 资源 (Resources)                                   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        数据层 (Data)                          │
+├─────────────────────────────────────────────────────────────┤
+│  MySQL 8.0+ (主数据库) + Redis 6.0+ (缓存)                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 技术栈详细说明
+
+### 前端技术栈
+
+#### 核心框架
+- **Vue 3** - 采用 Composition API，提供更好的 TypeScript 支持
+- **Element Plus** - 基于 Vue 3 的企业级 UI 组件库
+- **TypeScript** - 提供类型安全和更好的开发体验
+- **Vite** - 快速的构建工具，支持 HMR 和现代化开发
+
+#### 状态管理
+- **Pinia** - Vue 3 官方推荐的状态管理库
+  - 更好的 TypeScript 支持
+  - 模块化设计
+  - 支持持久化存储
+
+#### 路由管理
+- **Vue Router 4** - 支持动态路由和权限控制
+  - 路由懒加载
+  - 路由守卫
+  - 动态路由生成
+
+#### 开发工具
+- **ESLint + Prettier** - 代码规范和格式化
+- **Husky + lint-staged** - Git 钩子和代码检查
+- **Commitizen** - 规范化提交信息
+
+### 后端技术栈
+
+#### 核心框架
+- **Laravel 10** - 现代化的 PHP 框架
+- **PHP 8.1+** - 支持最新的 PHP 特性
+
+#### 认证授权
+- **JWT (JSON Web Token)** - 无状态的身份验证
+- **RBAC (Role-Based Access Control)** - 基于角色的权限控制
+
+#### 数据库
+- **MySQL 8.0+** - 主数据库
+- **Redis 6.0+** - 缓存和会话存储
+
+## 前端架构设计
+
+### 目录结构
+```
+frontend/
+├── public/                 # 静态资源
+│   ├── favicon.ico
+│   └── index.html
+├── src/
+│   ├── api/               # API 接口定义
+│   │   ├── auth.ts        # 认证相关接口
+│   │   ├── user.ts        # 用户管理接口
+│   │   ├── role.ts        # 角色管理接口
+│   │   └── menu.ts        # 菜单管理接口
+│   ├── assets/            # 资源文件
+│   │   ├── images/        # 图片资源
+│   │   ├── icons/         # 图标资源
+│   │   └── fonts/         # 字体资源
+│   ├── components/        # 公共组件
+│   │   ├── Table/         # 表格组件
+│   │   ├── Form/          # 表单组件
+│   │   ├── Upload/        # 上传组件
+│   │   └── Permission/    # 权限组件
+│   ├── hooks/             # 组合式函数
+│   │   ├── usePermission.ts
+│   │   ├── useTable.ts
+│   │   └── useForm.ts
+│   ├── layout/            # 布局组件
+│   │   ├── index.vue      # 主布局
+│   │   ├── Sidebar/       # 侧边栏
+│   │   ├── Header/        # 头部
+│   │   └── TagsView/      # 标签页
+│   ├── locales/           # 国际化文件
+│   │   ├── zh-cn.ts       # 中文
+│   │   ├── en.ts          # 英文
+│   │   └── index.ts       # 配置文件
+│   ├── router/            # 路由配置
+│   │   ├── index.ts       # 路由实例
+│   │   ├── routes.ts      # 路由定义
+│   │   └── permission.ts  # 路由守卫
+│   ├── stores/            # Pinia 状态管理
+│   │   ├── user.ts        # 用户状态
+│   │   ├── permission.ts  # 权限状态
+│   │   ├── app.ts         # 应用状态
+│   │   └── settings.ts    # 设置状态
+│   ├── styles/            # 样式文件
+│   │   ├── index.scss     # 全局样式
+│   │   ├── variables.scss # 变量定义
+│   │   └── mixins.scss    # 混入函数
+│   ├── types/             # TypeScript 类型定义
+│   │   ├── api.ts         # API 类型
+│   │   ├── user.ts        # 用户类型
+│   │   └── global.ts      # 全局类型
+│   ├── utils/             # 工具函数
+│   │   ├── request.ts     # HTTP 请求
+│   │   ├── auth.ts        # 认证工具
+│   │   ├── storage.ts     # 存储工具
+│   │   └── validate.ts    # 验证工具
+│   ├── views/             # 页面组件
+│   │   ├── login/         # 登录页面
+│   │   ├── dashboard/     # 仪表板
+│   │   ├── system/        # 系统管理
+│   │   │   ├── user/      # 用户管理
+│   │   │   ├── role/      # 角色管理
+│   │   │   └── menu/      # 菜单管理
+│   │   └── error/         # 错误页面
+│   ├── App.vue            # 根组件
+│   └── main.ts            # 入口文件
+├── .env                   # 环境变量
+├── .env.development       # 开发环境变量
+├── .env.production        # 生产环境变量
+├── package.json           # 依赖配置
+├── tsconfig.json          # TypeScript 配置
+├── vite.config.ts         # Vite 配置
+└── README.md              # 项目说明
+```
+
+### 状态管理架构
+
+```typescript
+// 状态管理架构示例
+interface AppState {
+  user: UserState          // 用户状态
+  permission: PermissionState // 权限状态
+  app: AppState            // 应用状态
+  settings: SettingsState  // 设置状态
+}
+
+interface UserState {
+  token: string
+  userInfo: User | null
+  roles: string[]
+  permissions: string[]
+}
+
+interface PermissionState {
+  routes: RouteRecordRaw[]
+  addRoutes: RouteRecordRaw[]
+  menus: Menu[]
+}
+```
+
+### 权限控制架构
+
+#### 1. 路由级权限
+```typescript
+// 动态路由生成
+const generateRoutes = (roles: string[]) => {
+  const accessedRoutes = filterAsyncRoutes(asyncRoutes, roles)
+  return accessedRoutes
+}
+
+// 路由过滤
+const filterAsyncRoutes = (routes: RouteRecordRaw[], roles: string[]) => {
+  const res: RouteRecordRaw[] = []
+  routes.forEach(route => {
+    if (hasPermission(roles, route)) {
+      res.push(route)
+    }
+  })
+  return res
+}
+```
+
+#### 2. 组件级权限
+```typescript
+// 权限指令
+app.directive('permission', {
+  mounted(el, binding) {
+    const { value } = binding
+    const roles = store.getters.roles
+    if (!checkPermission(value, roles)) {
+      el.parentNode?.removeChild(el)
+    }
+  }
+})
+```
+
+#### 3. 接口级权限
+```typescript
+// 请求拦截器
+request.interceptors.request.use(config => {
+  const token = getToken()
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+```
+
+## 后端架构设计
+
+### 分层架构
+
+```
+┌─────────────────────────────────────────┐
+│              Controller Layer            │
+│  ├── AuthController                     │
+│  ├── UserController                     │
+│  ├── RoleController                     │
+│  └── MenuController                     │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────┐
+│               Service Layer              │
+│  ├── AuthService                        │
+│  ├── UserService                        │
+│  ├── RoleService                        │
+│  └── MenuService                        │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────┐
+│               Model Layer                │
+│  ├── Admin                              │
+│  ├── Role                               │
+│  ├── Menu                               │
+│  └── Resource                           │
+└─────────────────────────────────────────┘
+```
+
+### RBAC 权限模型
+
+```
+┌─────────┐    ┌─────────┐    ┌─────────┐
+│  Admin  │────│  Role   │────│  Menu   │
+└─────────┘    └─────────┘    └─────────┘
+     │              │              │
+     │              │              │
+     │         ┌─────────┐    ┌─────────┐
+     └─────────│Resource │────│Category │
+               └─────────┘    └─────────┘
+```
+
+## 数据流架构
+
+### 前端数据流
+```
+User Action → Component → Store Action → API Call → Backend
+     ↑                                                  │
+     └── Component Update ← Store Mutation ← Response ←┘
+```
+
+### 后端数据流
+```
+API Request → Middleware → Controller → Service → Model → Database
+     ↑                                                      │
+     └── JSON Response ← Resource ← Service ← Model ←──────┘
+```
+
+## 部署架构
+
+### 开发环境
+```
+┌─────────────┐    ┌─────────────┐
+│   Frontend  │    │   Backend   │
+│  (Vite Dev) │    │ (Laravel)   │
+│   :5173     │    │   :8000     │
+└─────────────┘    └─────────────┘
+       │                  │
+       └──────────────────┘
+              │
+        ┌─────────────┐
+        │   MySQL     │
+        │   :3306     │
+        └─────────────┘
+```
+
+### 生产环境
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│    Nginx    │    │   PHP-FPM   │    │   MySQL     │
+│   (静态)     │    │  (Laravel)  │    │  (主数据库)  │
+│   :80/443   │    │   :9000     │    │   :3306     │
+└─────────────┘    └─────────────┘    └─────────────┘
+       │                  │                  │
+       └──────────────────┼──────────────────┘
+                          │
+                    ┌─────────────┐
+                    │    Redis    │
+                    │   (缓存)     │
+                    │   :6379     │
+                    └─────────────┘
+```
+
+## 安全架构
+
+### 认证流程
+```
+1. 用户登录 → 验证凭据 → 生成 JWT Token
+2. 前端存储 Token → 请求时携带 Token
+3. 后端验证 Token → 解析用户信息 → 权限检查
+```
+
+### 权限验证
+```
+1. 路由权限：根据用户角色动态生成路由
+2. 菜单权限：根据权限显示/隐藏菜单项
+3. 按钮权限：根据权限显示/隐藏操作按钮
+4. 接口权限：后端验证用户是否有接口访问权限
+```
+
+## 性能优化策略
+
+### 前端优化
+- **代码分割**：路由级别的懒加载
+- **组件缓存**：使用 KeepAlive 缓存页面组件
+- **资源优化**：图片懒加载、CDN 加速
+- **打包优化**：Tree Shaking、代码压缩
+
+### 后端优化
+- **数据库优化**：索引优化、查询优化
+- **缓存策略**：Redis 缓存热点数据
+- **API 优化**：分页查询、字段筛选
+- **队列处理**：异步处理耗时任务
+
+## 监控和日志
+
+### 前端监控
+- **错误监控**：捕获和上报 JavaScript 错误
+- **性能监控**：页面加载时间、接口响应时间
+- **用户行为**：页面访问统计、用户操作轨迹
+
+### 后端监控
+- **应用监控**：API 响应时间、错误率
+- **系统监控**：CPU、内存、磁盘使用率
+- **日志管理**：结构化日志、日志聚合分析
