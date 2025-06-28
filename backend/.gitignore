@@ -19,3 +19,6 @@ yarn-error.log
 /.idea
 /.vscode
 .php-cs-fixer.cache
+
+# 测试覆盖率报告
+/coverage
