@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('password', 128)->comment('密码');
             $table->string('icon', 500)->nullable()->comment('头像');
             $table->string('email', 100)->unique()->comment('邮箱');
-            $table->string('nick_name', 200)->comment('昵称');
+            $table->string('nick_name', 200)->nullable()->comment('昵称');
             $table->string('note', 500)->nullable()->comment('备注信息');
             $table->tinyInteger('status')->default(1)->comment('帐号启用状态：0->禁用；1->启用');
             $table->timestamps();
@@ -119,4 +119,4 @@ return new class extends Migration
         Schema::dropIfExists('roles');
         Schema::dropIfExists('admins');
     }
-}; 
+};
