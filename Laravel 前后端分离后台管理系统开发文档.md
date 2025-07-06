@@ -8,8 +8,8 @@
 ### 1.2 技术栈选择
 - **后端框架**：Laravel 10（PHP 8.1+）
   - 选择理由：成熟稳定的 PHP 框架，丰富的生态系统，优秀的 ORM 和中间件支持
-- **前端框架**：Vue 2 + Element UI + vue-element-admin
-  - 选择理由：渐进式框架，组件化开发，丰富的 UI 组件库
+- **前端框架**：Vue 3 + TypeScript + Element Plus + Pinia
+  - 选择理由：现代化渐进式框架，Composition API，类型安全，丰富的 UI 组件库
 - **数据库**：MySQL 8.0+
   - 选择理由：稳定可靠，性能优秀，社区支持完善
 - **缓存**：Redis 6.0+
@@ -33,10 +33,10 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                        前端层 (Frontend)                      │
 ├─────────────────────────────────────────────────────────────┤
-│  Vue.js + Element UI + vue-element-admin                    │
+│  Vue 3 + TypeScript + Element Plus + Pinia                 │
 │  ├── 用户界面 (UI Layer)                                    │
-│  ├── 状态管理 (Vuex)                                        │
-│  ├── 路由管理 (Vue Router)                                  │
+│  ├── 状态管理 (Pinia)                                       │
+│  ├── 路由管理 (Vue Router 4)                               │
 │  └── 权限控制 (Permission)                                  │
 └─────────────────────────────────────────────────────────────┘
                               │
@@ -132,11 +132,11 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                    状态管理层 (State Management)              │
 ├─────────────────────────────────────────────────────────────┤
-│  Vuex Store (状态管理)                                       │
+│  Pinia Store (状态管理)                                      │
 │  ├── 用户状态 (User State)                                   │
 │  ├── 权限状态 (Permission State)                            │
 │  ├── 应用状态 (App State)                                    │
-│  └── 缓存状态 (Cache State)                                  │
+│  └── 标签页状态 (TagsView State)                            │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -284,155 +284,172 @@ backend/
 
 #### 2.3.2 前端目录结构
 ```
-frontend/
-├── public/                       # 静态资源
-│   ├── favicon.ico              # 网站图标
-│   ├── index.html               # HTML 模板
-│   ├── api-docs.json            # OpenAPI 文档
-│   └── static/                  # 静态文件
-│       ├── images/              # 图片资源
-│       └── icons/               # 图标资源
-├── src/                         # 源代码
-│   ├── api/                     # API 接口
-│   │   ├── auth.js              # 认证相关接口
-│   │   ├── admin.js             # 用户管理接口
-│   │   ├── role.js              # 角色管理接口
-│   │   ├── menu.js              # 菜单管理接口
-│   │   ├── resource.js          # 资源管理接口
-│   │   ├── operation-log.js     # 操作日志接口
-│   │   └── index.js             # API 统一导出
-│   ├── assets/                  # 资源文件
-│   │   ├── images/              # 图片
-│   │   ├── icons/               # 图标
-│   │   └── styles/              # 样式
-│   ├── components/              # 公共组件
-│   │   ├── Breadcrumb/          # 面包屑导航
+src/                             # 源代码目录
+├── api/                         # API 接口定义
+│   ├── auth.ts                  # 认证相关接口
+│   ├── admin.ts                 # 管理员管理接口
+│   ├── role.ts                  # 角色管理接口
+│   ├── menu.ts                  # 菜单管理接口
+│   ├── resource.ts              # 资源管理接口
+│   ├── operation-log.ts         # 操作日志接口
+│   └── request.ts               # HTTP 请求配置
+├── components/                  # 公共组件
+│   ├── Pagination/              # 分页组件
+│   │   └── index.vue
+│   └── SvgIcon/                 # SVG 图标组件
+│       └── index.vue
+├── icons/                       # 图标资源
+│   ├── svg/                     # SVG 图标文件
+│   │   ├── user.svg
+│   │   ├── password.svg
+│   │   ├── eye.svg
+│   │   └── eye-open.svg
+│   └── index.ts                 # 图标注册
+├── layout/                      # 布局组件
+│   ├── components/              # 布局子组件
+│   │   ├── Navbar.vue           # 顶部导航栏
+│   │   ├── Sidebar/             # 侧边栏
 │   │   │   ├── index.vue
-│   │   │   └── index.js
-│   │   ├── Hamburger/           # 折叠按钮
+│   │   │   ├── SidebarItem.vue
+│   │   │   └── SidebarLogo.vue
+│   │   ├── TagsView/            # 标签页导航
+│   │   │   ├── index.vue
+│   │   │   └── ScrollPane.vue
+│   │   └── AppMain.vue          # 主内容区
+│   └── index.vue                # 主布局
+├── router/                      # 路由配置
+│   ├── index.ts                 # 路由主文件
+│   └── modules/                 # 路由模块
+│       ├── admin.ts             # 管理员管理路由
+│       ├── role.ts              # 角色管理路由
+│       ├── menu.ts              # 菜单管理路由
+│       └── system.ts            # 系统管理路由
+├── stores/                      # Pinia 状态管理
+│   ├── user.ts                  # 用户状态
+│   ├── app.ts                   # 应用状态
+│   ├── permission.ts            # 权限状态
+│   └── tagsView.ts              # 标签页状态
+├── styles/                      # 样式文件
+│   ├── index.scss               # 主样式文件
+│   ├── variables.module.scss    # 样式变量（支持 JS 导入）
+│   ├── sidebar.scss             # 侧边栏样式
+│   ├── element-ui.scss          # Element Plus 样式覆盖
+│   └── transition.scss          # 过渡动画
+├── utils/                       # 工具函数
+│   ├── auth.ts                  # 认证相关工具
+│   ├── request.ts               # HTTP 请求封装
+│   ├── validate.ts              # 验证工具
+│   ├── permission.ts            # 权限工具
+│   └── scroll-to.ts             # 滚动工具
+├── views/                       # 页面组件
+│   ├── login/                   # 登录页
+│   │   └── index.vue
+│   ├── dashboard/               # 仪表盘
+│   │   └── index.vue
+│   ├── system/                  # 系统管理
+│   │   ├── admin/               # 管理员管理
 │   │   │   └── index.vue
-│   │   ├── SvgIcon/             # SVG 图标
-│   │   │   ├── index.vue
-│   │   │   └── svg/
-│   │   ├── Pagination/          # 分页组件
-│   │   │   └── index.vue
-│   │   ├── TreeTable/           # 树形表格
-│   │   │   └── index.vue
-│   │   └── common/              # 通用组件
-│   │       ├── SearchForm.vue   # 搜索表单
-│   │       ├── ActionButtons.vue # 操作按钮
-│   │       └── StatusTag.vue    # 状态标签
-│   ├── directive/               # 自定义指令
-│   │   ├── permission/          # 权限指令
-│   │   │   ├── index.js
-│   │   │   └── permission.js
-│   │   └── index.js             # 指令统一导出
-│   ├── filters/                 # 过滤器
-│   │   ├── index.js             # 过滤器统一导出
-│   │   └── common.js            # 通用过滤器
-│   ├── icons/                   # 图标
-│   │   ├── svg/                 # SVG 图标文件
-│   │   └── index.js             # 图标统一导出
-│   ├── layout/                  # 布局组件
-│   │   ├── components/          # 布局子组件
-│   │   │   ├── Navbar.vue       # 顶部导航栏
-│   │   │   ├── Sidebar/         # 侧边栏
-│   │   │   │   ├── index.vue
-│   │   │   │   ├── SidebarItem.vue
-│   │   │   │   └── SidebarLogo.vue
-│   │   │   ├── TagsView/        # 标签栏导航
-│   │   │   │   ├── index.vue
-│   │   │   │   └── components/
-│   │   │   │       ├── ScrollPane.vue
-│   │   │   │       └── ContextMenu.vue
-│   │   │   ├── AppMain.vue      # 主内容区
-│   │   │   └── Footer.vue       # 底部版权信息
-│   │   └── index.vue            # 主布局
-│   ├── router/                  # 路由配置
-│   │   ├── index.js             # 路由主文件
-│   │   └── modules/             # 路由模块
-│   │       ├── admin.js         # 用户管理路由
-│   │       ├── role.js          # 角色管理路由
-│   │       ├── menu.js          # 菜单管理路由
-│   │       └── system.js        # 系统管理路由
-│   ├── store/                   # Vuex 状态管理
-│   │   ├── index.js             # Store 主文件
-│   │   └── modules/             # Store 模块
-│   │       ├── app.js           # 应用状态
-│   │       ├── user.js          # 用户状态
-│   │       ├── permission.js    # 权限状态
-│   │       └── tagsView.js      # 标签页状态
-│   ├── styles/                  # 样式文件
-│   │   ├── index.scss           # 主样式文件
-│   │   ├── variables.scss       # 变量定义
-│   │   ├── transition.scss      # 过渡动画
-│   │   ├── element-ui.scss      # Element UI 样式覆盖
-│   │   └── sidebar.scss         # 侧边栏样式
-│   ├── utils/                   # 工具函数
-│   │   ├── auth.js              # 认证相关工具
-│   │   ├── request.js           # HTTP 请求封装
-│   │   ├── validate.js          # 验证工具
-│   │   ├── permission.js        # 权限工具
-│   │   ├── common.js            # 通用工具
-│   │   └── index.js             # 工具统一导出
-│   ├── views/                   # 页面组件
-│   │   ├── login/               # 登录页
-│   │   │   ├── index.vue
-│   │   │   └── components/
-│   │   │       └── LoginForm.vue
-│   │   ├── dashboard/           # 仪表盘
-│   │   │   ├── index.vue
-│   │   │   └── components/
-│   │   │       ├── StatisticCard.vue
-│   │   │       └── ChartPanel.vue
-│   │   ├── admin/               # 用户管理
-│   │   │   ├── index.vue
-│   │   │   └── components/
-│   │   │       ├── AdminForm.vue
-│   │   │       └── RoleAssign.vue
-│   │   ├── role/                # 角色管理
-│   │   │   ├── index.vue
-│   │   │   └── components/
-│   │   │       ├── RoleForm.vue
-│   │   │       └── PermissionAssign.vue
-│   │   ├── menu/                # 菜单管理
-│   │   │   ├── index.vue
-│   │   │   └── components/
-│   │   │       ├── MenuForm.vue
-│   │   │       └── MenuTree.vue
-│   │   ├── resource/            # 资源管理
-│   │   │   ├── index.vue
-│   │   │   └── components/
-│   │   │       ├── ResourceForm.vue
-│   │   │       └── CategorySelect.vue
-│   │   ├── operation-log/       # 操作日志
-│   │   │   ├── index.vue
-│   │   │   └── components/
-│   │   │       ├── LogFilter.vue
-│   │   │       └── LogDetail.vue
-│   │   ├── profile/             # 个人中心
-│   │   │   ├── index.vue
-│   │   │   └── components/
-│   │   │       ├── ProfileForm.vue
-│   │   │       └── PasswordForm.vue
-│   │   ├── api-docs/            # API 文档
-│   │   │   └── index.vue
-│   │   └── error-page/          # 错误页面
-│   │       ├── 404.vue
-│   │       └── 403.vue
-│   ├── permission.js            # 权限控制
-│   ├── main.js                  # 入口文件
-│   └── App.vue                  # 根组件
+│   │   └── role/                # 角色管理
+│   │       └── index.vue
+│   └── error-page/              # 错误页面
+│       └── 404.vue
+├── App.vue                      # 根组件
+├── main.ts                      # 入口文件
+├── permission.ts                # 权限控制
+├── types/                       # TypeScript 类型定义
+│   ├── api.ts                   # API 相关类型
+│   ├── user.ts                  # 用户相关类型
+│   └── common.ts                # 通用类型
 ├── .env.development             # 开发环境配置
 ├── .env.production              # 生产环境配置
-├── .env.staging                 # 测试环境配置
-├── .eslintrc.js                 # ESLint 配置
-├── .prettierrc                  # Prettier 配置
-├── babel.config.js              # Babel 配置
-├── vue.config.js                # Vue CLI 配置
+├── .gitignore                   # Git 忽略文件
+├── index.html                   # HTML 模板
 ├── package.json                 # 依赖配置
+├── tsconfig.json                # TypeScript 配置
+├── vite.config.ts               # Vite 配置
 └── README.md                    # 项目说明
 ```
+
+### 2.4 前端技术栈详细说明
+
+#### 2.4.1 核心技术
+
+**Vue 3 (Composition API)**
+- 使用最新的 Composition API 进行组件开发
+- 更好的 TypeScript 支持和类型推导
+- 更灵活的逻辑复用和组织方式
+- 更好的性能和更小的包体积
+
+**TypeScript**
+- 提供完整的类型安全保障
+- 更好的开发体验和代码提示
+- 减少运行时错误，提高代码质量
+- 支持最新的 ES 特性
+
+**Element Plus**
+- Vue 3 生态的成熟 UI 组件库
+- 丰富的组件和完善的文档
+- 支持主题定制和国际化
+- 良好的可访问性支持
+
+#### 2.4.2 状态管理
+
+**Pinia**
+- Vue 3 官方推荐的状态管理库
+- 更简洁的 API 和更好的 TypeScript 支持
+- 支持组合式 API 风格
+- 内置 DevTools 支持
+
+#### 2.4.3 路由管理
+
+**Vue Router 4**
+- Vue 3 配套的路由管理器
+- 支持动态路由和嵌套路由
+- 完善的导航守卫机制
+- 支持路由懒加载
+
+#### 2.4.4 构建工具
+
+**Vite**
+- 基于 ES modules 的快速构建工具
+- 极快的冷启动和热更新
+- 内置 TypeScript 支持
+- 丰富的插件生态
+
+#### 2.4.5 样式方案
+
+**SCSS**
+- CSS 预处理器，支持变量、嵌套、混入等特性
+- 模块化样式管理
+- 支持样式变量导出到 JavaScript
+
+#### 2.4.6 HTTP 客户端
+
+**Axios**
+- 基于 Promise 的 HTTP 客户端
+- 支持请求和响应拦截器
+- 自动转换 JSON 数据
+- 支持请求取消和超时设置
+
+#### 2.4.7 开发特性
+
+**权限控制**
+- 基于角色的访问控制 (RBAC)
+- 路由级别的权限验证
+- 组件级别的权限控制
+- 动态菜单生成
+
+**布局系统**
+- 响应式布局设计
+- 可折叠侧边栏
+- 标签页导航
+- 面包屑导航
+
+**组件化开发**
+- 高度可复用的组件设计
+- 统一的组件规范
+- 完善的类型定义
+- 良好的可维护性
 
 ---
 
